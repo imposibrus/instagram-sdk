@@ -1,0 +1,4 @@
+--bail
+--timeout 5000
+--require ./testSetup.js
+--compilers js:babel-register
