@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "bluebird": "^3.0.5",
-    "intel": "^1.0.2"
+    "intel": "^1.0.2",
+    "lodash": "3.10.1"
   },
   "devDependencies": {
     "babel-core": "^6.1.4",

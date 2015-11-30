@@ -29,18 +29,20 @@ class InstagramSDK {
     console.log(`https://${this.instagramHost}/oauth/authorize/?client_id=${this.clientID}&redirect_uri=http://poster.loc&response_type=code`);
   }
 
+
+  //////////////////////////
+  //// Users
+  //////////////////////////
   getSelf() {
     return this._request();
   }
 
-  getSelfRecentMedia() {
-    // COUNT, MIN_ID, MAX_ID
-    return this._request({path: '/users/self/media/recent'});
+  getSelfRecentMedia({count = 10, min_id = undefined, max_id = undefined} = {}) {
+    return this._request({path: '/users/self/media/recent', query: {count, min_id, max_id}});
   }
 
-  getSelfRecentLikes() {
-    // COUNT, MAX_LIKE_ID
-    return this._request({path: '/users/self/media/liked'});
+  getSelfRecentLikes({count = 10, max_like_id = undefined} = {}) {
+    return this._request({path: '/users/self/media/liked', query: {count, max_like_id}});
   }
 
   getUser(userID) {
@@ -51,28 +53,200 @@ class InstagramSDK {
     return this._request({path: '/users/' + userID});
   }
 
-  getUserRecentMedia(userID) {
-    // COUNT, MIN_ID, MAX_ID
+  getUserRecentMedia(userID, {count = 10, min_id = undefined, max_id = undefined} = {}) {
     if(!userID) {
       throw new Error('Argument `userID` is required.');
     }
 
-    return this._request({path: `/users/${userID}/media/recent`});
+    return this._request({path: `/users/${userID}/media/recent`, query: {count, min_id, max_id}});
   }
 
-  usersSearch({query = '', count = 10}) {
-    return this._request({path: '/users/search'});
+  usersSearch({q = '', count = 10} = {}) {
+    return this._request({path: '/users/search', query: {q, count}});
   }
 
-  _request({method = 'GET', path = '/users/self', postData} = {}) {
+  //////////////////////////
+  //// Relationships
+  //////////////////////////
+
+  getSelfFollows() {
+    return this._request({path: '/users/self/follows'});
+  }
+
+  getSelfFollowedBy() {
+    return this._request({path: '/users/self/followed-by'});
+  }
+
+  getSelfRequestedBy() {
+    return this._request({path: '/users/self/requested-by'});
+  }
+
+  getUserRelationship(userID) {
+    if(!userID) {
+      throw new Error('Argument `userID` is required.');
+    }
+
+    return this._request({path: `/users/${userID}/relationship`});
+  }
+
+  updateUserRelationship(userID, action) {
+    if(!userID) {
+      throw new Error('Argument `userID` is required.');
+    }
+
+    if(!action) {
+      throw new Error('Argument `action` is required.');
+    }
+
+    return this._request({method: 'POST', path: `/users/${userID}/relationship`, postData: {action}});
+  }
+
+  //////////////////////////
+  //// Media
+  //////////////////////////
+
+  getMediaInfoById(mediaID) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    return this._request({path: `/media/${mediaID}`});
+  }
+
+  getMediaInfoByShortCode(shortCode) {
+    if(!shortCode) {
+      throw new Error('Argument `shortCode` is required.');
+    }
+
+    return this._request({path: `/media/shortcode/${shortCode}`});
+  }
+
+  mediaSearch({lat = 0, lng = 0, distance = 10} = {}) {
+    return this._request({path: '/media/search', query: {lat, lng, distance}});
+  }
+
+  //////////////////////////
+  //// Comments
+  //////////////////////////
+
+  getCommentsForMedia(mediaID) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    return this._request({path: `/media/${mediaID}/comments`});
+  }
+
+  addCommentForMedia(mediaID, text) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    if(!text) {
+      throw new Error('Argument `text` is required.');
+    }
+
+    return this._request({method: 'POST', path: `/media/${mediaID}/comments`, postData: {text}});
+  }
+
+  removeCommentForMedia(mediaID, commentId) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    if(!commentId) {
+      throw new Error('Argument `commentId` is required.');
+    }
+
+    return this._request({method: 'DELETE', path: `/media/${mediaID}/comments/${commentId}`});
+  }
+
+  //////////////////////////
+  //// Likes
+  //////////////////////////
+
+  getLikesForMedia(mediaID) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    return this._request({path: `/media/${mediaID}/likes`});
+  }
+
+  addLikeForMedia(mediaID) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    return this._request({method: 'POST', path: `/media/${mediaID}/likes`});
+  }
+
+  removeLikeForMedia(mediaID) {
+    if(!mediaID) {
+      throw new Error('Argument `mediaID` is required.');
+    }
+
+    return this._request({method: 'DELETE', path: `/media/${mediaID}/likes`});
+  }
+
+  //////////////////////////
+  //// Tags
+  //////////////////////////
+
+  getTagInfoByTagName(tagName) {
+    if(!tagName) {
+      throw new Error('Argument `tagName` is required.');
+    }
+
+    return this._request({path: `/tags/${tagName}`});
+  }
+
+  getRecentMediaForTagName(tagName, {count = 10, min_tag_id = undefined, max_tag_id = undefined} = {}) {
+    if(!tagName) {
+      throw new Error('Argument `tagName` is required.');
+    }
+
+    return this._request({path: `/tags/${tagName}/media/recent`, query: {count, min_tag_id, max_tag_id}});
+  }
+
+  tagsSearch(q = '') {
+    return this._request({path: '/tags/search', query: {q}});
+  }
+
+  //////////////////////////
+  //// Locations
+  //////////////////////////
+
+  getLocationInfoByLocationId(locationId) {
+    if(!locationId) {
+      throw new Error('Argument `locationId` is required.');
+    }
+
+    return this._request({path: `/locations/${locationId}`});
+  }
+
+  getRecentMediaForLocationId(locationId, {min_tag_id = undefined, max_tag_id = undefined} = {}) {
+    if(!locationId) {
+      throw new Error('Argument `locationId` is required.');
+    }
+
+    return this._request({path: `/locations/${locationId}/media/recent`, query: {min_tag_id, max_tag_id}});
+  }
+
+  locationsSearch({distance = 1000, facebook_places_id = undefined, foursquare_id = undefined, lat = undefined, lng = undefined, foursquare_v2_id = undefined} = {}) {
+    return this._request({path: '/locations/search', query: {distance, facebook_places_id, foursquare_id, lat, lng, foursquare_v2_id}});
+  }
+
+  _request({method = 'GET', path = '/users/self', postData, query = {}} = {}) {
     return new Promise((resolve, reject) => {
+      query.access_token = this.accessToken;
       let contentType = 'application/json',
           headers = {
             Accept: contentType
           },
           requestOptions = {
             hostname: this.instagramHost,
-            path: this.apiPath + path + '?access_token=' + this.accessToken,
+            path: this.apiPath + path + '?' + querystring.stringify(query),
             method: method
           },
           _postData;
