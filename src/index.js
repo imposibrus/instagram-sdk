@@ -34,15 +34,15 @@ class InstagramSDK {
   //// Users
   //////////////////////////
   getSelf() {
-    return this._request();
+    return this._request().then(this._parseJSON);
   }
 
   getSelfRecentMedia({count = 10, min_id = undefined, max_id = undefined} = {}) {
-    return this._request({path: '/users/self/media/recent', query: {count, min_id, max_id}});
+    return this._request({path: '/users/self/media/recent', query: {count, min_id, max_id}}).then(this._parseJSON);
   }
 
   getSelfRecentLikes({count = 10, max_like_id = undefined} = {}) {
-    return this._request({path: '/users/self/media/liked', query: {count, max_like_id}});
+    return this._request({path: '/users/self/media/liked', query: {count, max_like_id}}).then(this._parseJSON);
   }
 
   getUser(userID) {
@@ -50,7 +50,7 @@ class InstagramSDK {
       throw new Error('Argument `userID` is required.');
     }
 
-    return this._request({path: '/users/' + userID});
+    return this._request({path: '/users/' + userID}).then(this._parseJSON);
   }
 
   getUserRecentMedia(userID, {count = 10, min_id = undefined, max_id = undefined} = {}) {
@@ -58,11 +58,11 @@ class InstagramSDK {
       throw new Error('Argument `userID` is required.');
     }
 
-    return this._request({path: `/users/${userID}/media/recent`, query: {count, min_id, max_id}});
+    return this._request({path: `/users/${userID}/media/recent`, query: {count, min_id, max_id}}).then(this._parseJSON);
   }
 
   usersSearch({q = '', count = 10} = {}) {
-    return this._request({path: '/users/search', query: {q, count}});
+    return this._request({path: '/users/search', query: {q, count}}).then(this._parseJSON);
   }
 
   //////////////////////////
@@ -70,15 +70,15 @@ class InstagramSDK {
   //////////////////////////
 
   getSelfFollows() {
-    return this._request({path: '/users/self/follows'});
+    return this._request({path: '/users/self/follows'}).then(this._parseJSON);
   }
 
   getSelfFollowedBy() {
-    return this._request({path: '/users/self/followed-by'});
+    return this._request({path: '/users/self/followed-by'}).then(this._parseJSON);
   }
 
   getSelfRequestedBy() {
-    return this._request({path: '/users/self/requested-by'});
+    return this._request({path: '/users/self/requested-by'}).then(this._parseJSON);
   }
 
   getUserRelationship(userID) {
@@ -86,7 +86,7 @@ class InstagramSDK {
       throw new Error('Argument `userID` is required.');
     }
 
-    return this._request({path: `/users/${userID}/relationship`});
+    return this._request({path: `/users/${userID}/relationship`}).then(this._parseJSON);
   }
 
   updateUserRelationship(userID, action) {
@@ -98,7 +98,7 @@ class InstagramSDK {
       throw new Error('Argument `action` is required.');
     }
 
-    return this._request({method: 'POST', path: `/users/${userID}/relationship`, postData: {action}});
+    return this._request({method: 'POST', path: `/users/${userID}/relationship`, postData: {action}}).then(this._parseJSON);
   }
 
   //////////////////////////
@@ -110,7 +110,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
-    return this._request({path: `/media/${mediaID}`});
+    return this._request({path: `/media/${mediaID}`}).then(this._parseJSON);
   }
 
   getMediaInfoByShortCode(shortCode) {
@@ -118,11 +118,11 @@ class InstagramSDK {
       throw new Error('Argument `shortCode` is required.');
     }
 
-    return this._request({path: `/media/shortcode/${shortCode}`});
+    return this._request({path: `/media/shortcode/${shortCode}`}).then(this._parseJSON);
   }
 
   mediaSearch({lat = 0, lng = 0, distance = 10} = {}) {
-    return this._request({path: '/media/search', query: {lat, lng, distance}});
+    return this._request({path: '/media/search', query: {lat, lng, distance}}).then(this._parseJSON);
   }
 
   //////////////////////////
@@ -134,7 +134,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
-    return this._request({path: `/media/${mediaID}/comments`});
+    return this._request({path: `/media/${mediaID}/comments`}).then(this._parseJSON);
   }
 
   addCommentForMedia(mediaID, text) {
@@ -146,7 +146,7 @@ class InstagramSDK {
       throw new Error('Argument `text` is required.');
     }
 
-    return this._request({method: 'POST', path: `/media/${mediaID}/comments`, postData: {text}});
+    return this._request({method: 'POST', path: `/media/${mediaID}/comments`, postData: {text}}).then(this._parseJSON);
   }
 
   removeCommentForMedia(mediaID, commentId) {
@@ -158,7 +158,7 @@ class InstagramSDK {
       throw new Error('Argument `commentId` is required.');
     }
 
-    return this._request({method: 'DELETE', path: `/media/${mediaID}/comments/${commentId}`});
+    return this._request({method: 'DELETE', path: `/media/${mediaID}/comments/${commentId}`}).then(this._parseJSON);
   }
 
   //////////////////////////
@@ -170,7 +170,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
-    return this._request({path: `/media/${mediaID}/likes`});
+    return this._request({path: `/media/${mediaID}/likes`}).then(this._parseJSON);
   }
 
   addLikeForMedia(mediaID) {
@@ -178,7 +178,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
-    return this._request({method: 'POST', path: `/media/${mediaID}/likes`});
+    return this._request({method: 'POST', path: `/media/${mediaID}/likes`}).then(this._parseJSON);
   }
 
   removeLikeForMedia(mediaID) {
@@ -186,7 +186,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
-    return this._request({method: 'DELETE', path: `/media/${mediaID}/likes`});
+    return this._request({method: 'DELETE', path: `/media/${mediaID}/likes`}).then(this._parseJSON);
   }
 
   //////////////////////////
@@ -198,7 +198,7 @@ class InstagramSDK {
       throw new Error('Argument `tagName` is required.');
     }
 
-    return this._request({path: `/tags/${tagName}`});
+    return this._request({path: `/tags/${tagName}`}).then(this._parseJSON);
   }
 
   getRecentMediaForTagName(tagName, {count = 10, min_tag_id = undefined, max_tag_id = undefined} = {}) {
@@ -206,11 +206,11 @@ class InstagramSDK {
       throw new Error('Argument `tagName` is required.');
     }
 
-    return this._request({path: `/tags/${tagName}/media/recent`, query: {count, min_tag_id, max_tag_id}});
+    return this._request({path: `/tags/${tagName}/media/recent`, query: {count, min_tag_id, max_tag_id}}).then(this._parseJSON);
   }
 
   tagsSearch(q = '') {
-    return this._request({path: '/tags/search', query: {q}});
+    return this._request({path: '/tags/search', query: {q}}).then(this._parseJSON);
   }
 
   //////////////////////////
@@ -222,7 +222,7 @@ class InstagramSDK {
       throw new Error('Argument `locationId` is required.');
     }
 
-    return this._request({path: `/locations/${locationId}`});
+    return this._request({path: `/locations/${locationId}`}).then(this._parseJSON);
   }
 
   getRecentMediaForLocationId(locationId, {min_tag_id = undefined, max_tag_id = undefined} = {}) {
@@ -230,11 +230,66 @@ class InstagramSDK {
       throw new Error('Argument `locationId` is required.');
     }
 
-    return this._request({path: `/locations/${locationId}/media/recent`, query: {min_tag_id, max_tag_id}});
+    return this._request({path: `/locations/${locationId}/media/recent`, query: {min_tag_id, max_tag_id}}).then(this._parseJSON);
   }
 
-  locationsSearch({distance = 1000, facebook_places_id = undefined, foursquare_id = undefined, lat = undefined, lng = undefined, foursquare_v2_id = undefined} = {}) {
-    return this._request({path: '/locations/search', query: {distance, facebook_places_id, foursquare_id, lat, lng, foursquare_v2_id}});
+  locationsSearch({
+      distance = 1000,
+      facebook_places_id = undefined,
+      foursquare_id = undefined,
+      lat = undefined,
+      lng = undefined,
+      foursquare_v2_id = undefined
+      } = {}) {
+
+    return this._request({
+      path: '/locations/search',
+      query: {
+        distance,
+        facebook_places_id,
+        foursquare_id,
+        lat,
+        lng,
+        foursquare_v2_id
+      }
+    }).then(this._parseJSON);
+  }
+
+  //////////////////////////
+  //// Embedding
+  //////////////////////////
+
+  getMediaJPGByShortCode(shortCode) {
+    if(!shortCode) {
+      throw new Error('Argument `shortCode` is required.');
+    }
+
+    return this._request({path: `/p/${shortCode}/media`}).then(this._getHeaderValue('Location'));
+  }
+
+  _getHeaderValue(headerName) {
+    return ({res} = {}) => {
+      return Promise.resolve(res.headers[headerName]);
+    };
+  }
+
+  _parseJSON({res, resData} = {}) {
+    console.log('_parseJSON called');
+    var resJSON = {};
+
+    if(res.statusCode == 204) {
+      return Promise.resolve({});
+    }
+
+    try {
+      resJSON = JSON.parse(resData);
+    } catch(err) {
+      logger.debug('_parseJSON: invalid response:', resData);
+      return Promise.reject(new Error('Invalid JSON response:' + resData));
+    }
+
+    logger.debug('_parseJSON: response: %:2j', resJSON);
+    return Promise.resolve(resJSON);
   }
 
   _request({method = 'GET', path = '/users/self', postData, query = {}} = {}) {
@@ -247,7 +302,7 @@ class InstagramSDK {
           requestOptions = {
             hostname: this.instagramHost,
             path: this.apiPath + path + '?' + querystring.stringify(query),
-            method: method
+            method
           },
           _postData;
 
@@ -261,27 +316,15 @@ class InstagramSDK {
       requestOptions.headers = headers;
       logger.debug('_request: request with params: %:2j', requestOptions);
 
-      var request = https.request(requestOptions, function(res) {
-        var resData = '',
-            resJSON = '';
+      var request = https.request(requestOptions, (res) => {
+        var resData = '';
 
-        if(res.statusCode == 204) {
-          return resolve({});
-        }
-
-        res.on('data', function(data) {
+        res.on('data', (data) => {
           resData += data;
         });
-        res.on('end', function() {
+        res.on('end', () => {
           logger.debug('_request: response statusCode:', res.statusCode);
-          try {
-            resJSON = JSON.parse(resData);
-          } catch(err) {
-            logger.debug('_request: invalid response:', resData);
-            return reject(new Error('Invalid JSON response:' + resData));
-          }
-          logger.debug('_request: response: %:2j', resJSON);
-          resolve(resJSON);
+          resolve({res, resData});
         });
       }).on('error', reject);
 

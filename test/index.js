@@ -3,23 +3,29 @@ import InstagramSDK from '../src/index';
 import should from 'should';
 import sinon from 'sinon';
 import _ from 'lodash';
+import Promise from 'bluebird';
+import https from 'https';
 
 const instagramSDK = new InstagramSDK({
   accessToken: process.env.ACCESS_TOKEN
 });
 
-describe('InstagramSDK', function() {
+describe('Public endpoints', function() {
   before(function() {
-    sinon.stub(instagramSDK, '_request');
+    sinon.stub(instagramSDK, '_request', Promise.resolve);
+    sinon.stub(instagramSDK, '_parseJSON', Promise.resolve);
   });
   after(function() {
     instagramSDK._request.restore();
+    instagramSDK._parseJSON.restore();
   });
 
   describe('Users', function() {
     it('should get self account', function() {
-      instagramSDK.getSelf();
-      sinon.assert.calledOnce(instagramSDK._request);
+      instagramSDK.getSelf().then(() => {
+        sinon.assert.calledOnce(instagramSDK._request);
+        sinon.assert.calledOnce(instagramSDK._parseJSON);
+      });
     });
 
     it('should get self recent media', function() {
@@ -232,4 +238,142 @@ describe('InstagramSDK', function() {
     });
 
   });
+
+  describe('Embedding', function() {
+    before(function() {
+      sinon.stub(instagramSDK, '_getHeaderValue', Promise.resolve);
+    });
+    after(function() {
+      instagramSDK._getHeaderValue.restore();
+    });
+
+    it('should get media JPG url by short code', function() {
+      instagramSDK.getMediaJPGByShortCode('qwe');
+      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/p/qwe/media'});
+      sinon.assert.calledOnce(instagramSDK._getHeaderValue);
+    });
+
+    it('should thrown a error on getting media JPG url if no shortCode provided', function() {
+      instagramSDK.getMediaJPGByShortCode.should.throw('Argument `shortCode` is required.');
+      sinon.assert.calledOnce(instagramSDK._getHeaderValue);
+    });
+
+  });
+
+});
+
+describe('_request', function() {
+  var writeStub, onStub, endStub;
+  beforeEach(function() {
+    function requestStub() {
+      var that = this;
+      writeStub = sinon.stub().returns(that);
+      onStub = sinon.stub().returns(that);
+      endStub = sinon.stub().returns(that);
+      this.on = onStub;
+      this.end = endStub;
+      this.write = writeStub;
+      return that;
+    }
+    sinon.stub(https, 'request', requestStub);
+  });
+  afterEach(function() {
+    https.request.restore();
+  });
+
+  it('should send GET-request to `/api/users`', function() {
+    instagramSDK._request({path: '/api/users'});
+
+    sinon.assert.calledWithMatch(https.request, {
+      method: 'GET',
+      hostname: instagramSDK.instagramHost,
+      path: `${instagramSDK.apiPath}/api/users?access_token=${instagramSDK.accessToken}`,
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    sinon.assert.calledOnce(onStub);
+    sinon.assert.calledOnce(endStub);
+    sinon.assert.notCalled(writeStub);
+  });
+
+  it('should send POST-request with empty body to `/api/users`', function() {
+    instagramSDK._request({method: 'POST', path: '/api/users'});
+
+    sinon.assert.calledWithMatch(https.request, {
+      method: 'POST',
+      hostname: instagramSDK.instagramHost,
+      path: `${instagramSDK.apiPath}/api/users?access_token=${instagramSDK.accessToken}`,
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    sinon.assert.calledOnce(onStub);
+    sinon.assert.calledOnce(endStub);
+    sinon.assert.notCalled(writeStub);
+  });
+
+  it('should send POST-request with body to `/api/users`', function() {
+    let postData = {qwe: 'asd'},
+        postDataJSON = JSON.stringify(postData);
+
+    instagramSDK._request({method: 'POST', path: '/api/users', postData});
+
+    sinon.assert.calledWithMatch(https.request, {
+      method: 'POST',
+      hostname: instagramSDK.instagramHost,
+      path: `${instagramSDK.apiPath}/api/users?access_token=${instagramSDK.accessToken}`,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Content-length': postDataJSON.length
+      }
+    });
+
+    sinon.assert.calledOnce(onStub);
+    sinon.assert.calledOnce(endStub);
+    sinon.assert.calledWithExactly(writeStub, postDataJSON);
+  });
+
+  it('should send GET-request with query to `/api/users`', function() {
+    instagramSDK._request({method: 'GET', path: '/api/users', query: {qwe: 'asd'}});
+
+    sinon.assert.calledWithMatch(https.request, {
+      method: 'GET',
+      hostname: instagramSDK.instagramHost,
+      path: `${instagramSDK.apiPath}/api/users?qwe=asd&access_token=${instagramSDK.accessToken}`,
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    sinon.assert.calledOnce(onStub);
+    sinon.assert.calledOnce(endStub);
+    sinon.assert.notCalled(writeStub);
+  });
+
+  it('should send POST-request with body and query to `/api/users`', function() {
+    let postData = {qwe: 'asd'},
+        postDataJSON = JSON.stringify(postData);
+
+    instagramSDK._request({method: 'POST', path: '/api/users', postData, query: {qwe: 'asd'}});
+
+    sinon.assert.calledWithMatch(https.request, {
+      method: 'POST',
+      hostname: instagramSDK.instagramHost,
+      path: `${instagramSDK.apiPath}/api/users?qwe=asd&access_token=${instagramSDK.accessToken}`,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Content-length': postDataJSON.length
+      }
+    });
+
+    sinon.assert.calledOnce(onStub);
+    sinon.assert.calledOnce(endStub);
+    sinon.assert.calledWithExactly(writeStub, postDataJSON);
+  });
+
 });
