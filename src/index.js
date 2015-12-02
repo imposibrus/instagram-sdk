@@ -267,6 +267,52 @@ class InstagramSDK {
     return this._request({path: `/p/${shortCode}/media`}).then(this._getHeaderValue('Location'));
   }
 
+  //////////////////////////
+  //// Subscriptions
+  //////////////////////////
+
+  addSubscription({object = undefined, aspect = undefined, verify_token = undefined, callback_url = undefined} = {}) {
+    if(!object || !aspect || !callback_url) {
+      throw new Error('Arguments `object`, `aspect` and `callback_url` is required.');
+    }
+
+    return this._request({
+      method: 'POST',
+      path: '/subscriptions',
+      postData: {
+        object,
+        aspect,
+        verify_token,
+        callback_url,
+        client_id: this.clientID,
+        client_secret: this.clientSecret
+      }
+    }).then(this._parseJSON);
+  }
+
+  getSubscriptions() {
+    return this._request({
+      path: '/subscriptions',
+      query: {
+        client_id: this.clientID,
+        client_secret: this.clientSecret
+      }
+    }).then(this._parseJSON);
+  }
+
+  removeSubscription({object = undefined, id = undefined} = {}) {
+    return this._request({
+      method: 'DELETE',
+      path: '/subscriptions',
+      query: {
+        client_id: this.clientID,
+        client_secret: this.clientSecret,
+        object,
+        id
+      }
+    }).then(this._parseJSON);
+  }
+
   _getHeaderValue(headerName) {
     return ({res} = {}) => {
       return Promise.resolve(res.headers[headerName]);
