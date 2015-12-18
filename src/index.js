@@ -18,17 +18,35 @@ class InstagramSDK {
     this.clientSecret = clientSecret;
     this.accessToken = accessToken;
 
-    if(!accessToken && (clientID && clientSecret)) {
-      this.printLoginUrl();
-    } else if(accessToken) {
+    //if(!accessToken && (clientID && clientSecret)) {
+    //  this.printLoginUrl();
+    //} else if(accessToken) {
+    //
+    //}
+  }
 
+  //printLoginUrl() {
+  //  console.log(`https://${this.instagramHost}/oauth/authorize/?client_id=${this.clientID}&redirect_uri=http://poster.loc&response_type=code`);
+  //}
+
+
+  //////////////////////////
+  //// Auth
+  //////////////////////////
+
+  requestAccessToken(redirect_uri, code) {
+    if(!redirect_uri || !code) {
+      throw new Error('You must specify both of `redirect_uri` and `code` parameters.');
     }
-  }
 
-  printLoginUrl() {
-    console.log(`https://${this.instagramHost}/oauth/authorize/?client_id=${this.clientID}&redirect_uri=http://poster.loc&response_type=code`);
+    return this._oAuth({path: '/access_token', postData: {
+      client_id: this.clientID,
+      client_secret: this.clientSecret,
+      grant_type: 'authorization_code',
+      redirect_uri,
+      code
+    }}).then(this._parseJSON);
   }
-
 
   //////////////////////////
   //// Users
@@ -324,6 +342,49 @@ class InstagramSDK {
         });
         res.on('end', () => {
           logger.debug('_request: response statusCode:', res.statusCode);
+          resolve({res, resData});
+        });
+      }).on('error', reject);
+
+      if(postData) {
+        request.write(_postData);
+      }
+
+      request.end();
+    });
+  }
+
+  _oAuth({method = 'POST', path = '/access_token', postData} = {}) {
+    return new Promise((resolve, reject) => {
+      let contentType = 'application/json',
+          headers = {
+            Accept: contentType
+          },
+          requestOptions = {
+            hostname: this.instagramHost,
+            path: `/oauth${path}`,
+            method
+          },
+          _postData;
+
+      if(postData) {
+        _postData = querystring.stringify(postData);
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        headers['Content-length'] = _postData.length;
+        logger.debug('_oAuth: request with postData: %:2j', _postData);
+      }
+
+      requestOptions.headers = headers;
+      logger.debug('_oAuth: request with params: %:2j', requestOptions);
+
+      var request = https.request(requestOptions, (res) => {
+        var resData = '';
+
+        res.on('data', (data) => {
+          resData += data;
+        });
+        res.on('end', () => {
+          logger.debug('_oAuth: response statusCode:', res.statusCode);
           resolve({res, resData});
         });
       }).on('error', reject);
