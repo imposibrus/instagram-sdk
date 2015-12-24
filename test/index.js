@@ -225,7 +225,7 @@ describe('Public endpoints', function() {
 
     it('should get recent media by location id', function() {
       instagramSDK.getRecentMediaForLocationId(123);
-      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/locations/123/media/recent', query: {min_tag_id: undefined, max_tag_id: undefined}});
+      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/locations/123/media/recent', query: {count: 10, min_id: undefined, max_id: undefined}});
     });
 
     it('should thrown a error on getting recent media if no locationId provided', function() {
@@ -391,6 +391,39 @@ describe('_request', function() {
     sinon.assert.calledOnce(onStub);
     sinon.assert.calledOnce(endStub);
     sinon.assert.notCalled(writeStub);
+  });
+
+});
+
+describe('Get all helpers', () => {
+  beforeEach(function() {
+    sinon.stub(instagramSDK, 'getSelfRecentMedia', () => {
+      return Promise.resolve({
+        meta: {code: 200},
+        data: []
+      });
+    });
+    sinon.stub(instagramSDK, 'getSelfRecentLikes', () => {
+      return Promise.resolve({
+        meta: {code: 200},
+        data: []
+      });
+    });
+  });
+
+  afterEach(function() {
+    instagramSDK.getSelfRecentMedia.restore();
+    instagramSDK.getSelfRecentLikes.restore();
+  });
+
+  it('should get self all media', function() {
+    instagramSDK.getSelfAllMedia([{count: 10}], {timeout: 10});
+    sinon.assert.calledWithExactly(instagramSDK.getSelfRecentMedia, {count: 10, max_id: null});
+  });
+
+  it('should get self all likes', function() {
+    instagramSDK.getSelfAllLikes([{count: 10}], {timeout: 10});
+    sinon.assert.calledWithExactly(instagramSDK.getSelfRecentLikes, {count: 10, max_like_id: null});
   });
 
 });

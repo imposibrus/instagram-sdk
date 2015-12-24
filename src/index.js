@@ -60,8 +60,52 @@ class InstagramSDK {
     return this._request({path: '/users/self/media/recent', query: {count, min_id, max_id}}).then(this._parseJSON);
   }
 
+  _paginate(method = this.getSelfRecentMedia, methodArgs = [], {timeout = 0, paginationProp = 'max_id'} = {}) {
+    return new Promise((resolve, reject) => {
+      var data = [],
+          request = (max_id, cb) => {
+            if(methodArgs.length == 1) {
+              methodArgs[0][paginationProp] = max_id;
+            } else {
+              var lastArg = methodArgs.slice(-1)[0];
+              lastArg[paginationProp] = max_id;
+              methodArgs.splice(-1, 1, lastArg);
+            }
+
+            method.call(this, ...methodArgs).then((resp) => {
+              if(!resp.meta || resp.meta.code != 200) {
+                return reject('Invalid response: ' + JSON.stringify(resp));
+              }
+
+              data = data.concat(resp.data);
+              if(resp.pagination && resp.pagination['next_' + paginationProp]) {
+                setTimeout(() => {
+                  request(resp.pagination['next_' + paginationProp], cb);
+                }, timeout);
+              } else {
+                cb(data);
+              }
+            }).catch((err) => {
+              logger.critical('trace', err);
+              reject(err);
+            });
+          };
+
+      request(null, resolve);
+    });
+  }
+
+  getSelfAllMedia(args, options) {
+    return this._paginate(this.getSelfRecentMedia, args, options);
+  }
+
   getSelfRecentLikes({count = 10, max_like_id = undefined} = {}) {
     return this._request({path: '/users/self/media/liked', query: {count, max_like_id}}).then(this._parseJSON);
+  }
+
+  getSelfAllLikes(args, options) {
+    options.paginationProp = 'max_like_id';
+    return this._paginate(this.getSelfRecentLikes, args, options);
   }
 
   getUser(userID) {
@@ -78,6 +122,10 @@ class InstagramSDK {
     }
 
     return this._request({path: `/users/${userID}/media/recent`, query: {count, min_id, max_id}}).then(this._parseJSON);
+  }
+
+  getUserAllMedia(args, options) {
+    return this._paginate(this.getUserRecentMedia, args, options);
   }
 
   usersSearch({q = '', count = 10} = {}) {
@@ -228,6 +276,11 @@ class InstagramSDK {
     return this._request({path: `/tags/${tagName}/media/recent`, query: {count, min_tag_id, max_tag_id}}).then(this._parseJSON);
   }
 
+  getAllMediaForTagName(args, options) {
+    options.paginationProp = 'max_tag_id';
+    return this._paginate(this.getRecentMediaForTagName, args, options);
+  }
+
   tagsSearch(q = '') {
     return this._request({path: '/tags/search', query: {q}}).then(this._parseJSON);
   }
@@ -244,12 +297,17 @@ class InstagramSDK {
     return this._request({path: `/locations/${locationId}`}).then(this._parseJSON);
   }
 
-  getRecentMediaForLocationId(locationId, {min_tag_id = undefined, max_tag_id = undefined} = {}) {
+  getRecentMediaForLocationId(locationId, {count = 10, min_id = undefined, max_id = undefined} = {}) {
     if(!locationId) {
       throw new Error('Argument `locationId` is required.');
     }
 
-    return this._request({path: `/locations/${locationId}/media/recent`, query: {min_tag_id, max_tag_id}}).then(this._parseJSON);
+    return this._request({path: `/locations/${locationId}/media/recent`, query: {count, min_id, max_id}}).then(this._parseJSON);
+  }
+
+  getAllMediaForLocationId(args, options) {
+    options.paginationProp = 'max_id';
+    return this._paginate(this.getRecentMediaForLocationId, args, options);
   }
 
   locationsSearch({
@@ -361,7 +419,7 @@ class InstagramSDK {
     let out = {};
     for(let i in query) {
       if(query.hasOwnProperty(i)) {
-        if(query[i] !== undefined) {
+        if(query[i] !== undefined && query[i] !== null) {
           out[i] = query[i];
         }
       }
