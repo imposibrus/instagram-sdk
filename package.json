@@ -1,12 +1,37 @@
 {
   "name": "instagram-sdk",
-  "version": "1.0.1",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.2",
+  "description": "Instagram unofficial SDK.",
+  "keywords": [
+    "instagram",
+    "sdk"
+  ],
+  "homepage": "https://github.com/imposibrus/instagram-sdk",
+  "bugs": {
+    "url": "https://github.com/imposibrus/instagram-sdk/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Vadim Petrov"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imposibrus/instagram-sdk.git"
+  },
+  "engines": {
+    "node": ">=0.10.25"
+  },
+  "files": [
+    "dst/",
+    "lib/",
+    "src/"
+  ],
+  "main": "dst/index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
+    "prepublish": "gulp compile",
     "test": "mocha"
   },
   "dependencies": {
@@ -24,13 +49,5 @@
     "mocha": "^2.3.3",
     "should": "^7.1.1",
     "sinon": "^1.17.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@bitbucket.org/ft-ru/instagram-sdk.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "homepage": "https://bitbucket.org/ft-ru/instagram-sdk#readme"
+  }
 }
