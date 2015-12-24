@@ -376,4 +376,21 @@ describe('_request', function() {
     sinon.assert.calledWithExactly(writeStub, postDataJSON);
   });
 
+  it('should reject undefined query fields', function() {
+    instagramSDK._request({method: 'GET', path: '/api/users', query: {qwe: 'asd', asd: undefined}});
+
+    sinon.assert.calledWithMatch(https.request, {
+      method: 'GET',
+      hostname: instagramSDK.instagramHost,
+      path: `${instagramSDK.apiPath}/api/users?qwe=asd&access_token=${instagramSDK.accessToken}`,
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    sinon.assert.calledOnce(onStub);
+    sinon.assert.calledOnce(endStub);
+    sinon.assert.notCalled(writeStub);
+  });
+
 });

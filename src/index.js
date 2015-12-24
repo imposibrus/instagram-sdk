@@ -3,6 +3,7 @@ import https from 'https';
 import querystring from 'querystring';
 import Promise from 'bluebird';
 import logger from '../lib/logger';
+import util from 'util';
 
 class InstagramSDK {
   instagramHost = 'api.instagram.com';
@@ -334,8 +335,21 @@ class InstagramSDK {
       return Promise.reject(new Error('Invalid JSON response:' + resData));
     }
 
-    logger.debug('_parseJSON: response: %:2j', resJSON);
+    logger.debug('_parseJSON: response: %.-500s', util.inspect(resJSON));
     return Promise.resolve(resJSON);
+  }
+
+  _normalizeQueryParams(query) {
+    let out = {};
+    for(let i in query) {
+      if(query.hasOwnProperty(i)) {
+        if(query[i] !== undefined) {
+          out[i] = query[i];
+        }
+      }
+    }
+
+    return out;
   }
 
   _request({method = 'GET', path = '/users/self', postData, query = {}} = {}) {
@@ -347,7 +361,7 @@ class InstagramSDK {
           },
           requestOptions = {
             hostname: this.instagramHost,
-            path: this.apiPath + path + '?' + querystring.stringify(query),
+            path: this.apiPath + path + '?' + querystring.stringify(this._normalizeQueryParams(query)),
             method
           },
           _postData;
@@ -369,6 +383,8 @@ class InstagramSDK {
           resData += data;
         });
         res.on('end', () => {
+          logger.debug('_request: rate limit:', res.headers['x-ratelimit-limit']);
+          logger.debug('_request: rate limit remaining:', res.headers['x-ratelimit-remaining']);
           logger.debug('_request: response statusCode:', res.statusCode);
           resolve({res, resData});
         });
