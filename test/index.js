@@ -66,12 +66,12 @@ describe('Public endpoints', function() {
   describe('Relationships', function() {
     it('should get self follows', function() {
       instagramSDK.getSelfFollows();
-      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/users/self/follows'});
+      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/users/self/follows', query: {}});
     });
 
     it('should get self followed by', function() {
       instagramSDK.getSelfFollowedBy();
-      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/users/self/followed-by'});
+      sinon.assert.calledWithExactly(instagramSDK._request, {path: '/users/self/followed-by', query: {}});
     });
 
     it('should get self requested by', function() {

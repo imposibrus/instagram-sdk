@@ -136,12 +136,70 @@ class InstagramSDK {
   //// Relationships
   //////////////////////////
 
-  getSelfFollows() {
-    return this._request({path: '/users/self/follows'}).then(this._parseJSON);
+  // followed
+  getSelfFollows(query = {}) {
+    return this._request({path: '/users/self/follows', query}).then(this._parseJSON);
   }
 
-  getSelfFollowedBy() {
-    return this._request({path: '/users/self/followed-by'}).then(this._parseJSON);
+  getSelfAllFollows(args, options) {
+    options.paginationProp = 'cursor';
+
+    if(args.length == 0) {
+      args.push({});
+    }
+
+    return this._paginate(this.getSelfFollows, args, options);
+  }
+
+  getUserFollows(userID, query = {}) {
+    if(!userID) {
+      throw new Error('Argument `userID` is required.');
+    }
+
+    return this._request({path: `/users/${userID}/follows`, query}).then(this._parseJSON);
+  }
+
+  getUserAllFollows(args, options) {
+    options.paginationProp = 'cursor';
+
+    if(args.length == 1) {
+      args.push({});
+    }
+
+    return this._paginate(this.getUserFollows, args, options);
+  }
+
+  // followers
+  getSelfFollowedBy(query = {}) {
+    return this._request({path: '/users/self/followed-by', query}).then(this._parseJSON);
+  }
+
+  getSelfAllFollowedBy(args, options) {
+    options.paginationProp = 'cursor';
+
+    if(args.length == 0) {
+      args.push({});
+    }
+
+    return this._paginate(this.getSelfFollowedBy, args, options);
+  }
+
+  getUserFollowedBy(userID, query = {}) {
+    if(!userID) {
+      throw new Error('Argument `userID` is required.');
+    }
+
+    return this._request({path: `/users/${userID}/followed-by`, query}).then(this._parseJSON);
+  }
+
+  getUserAllFollowedBy(args, options) {
+    options.paginationProp = 'cursor';
+
+    if(args.length == 1) {
+      args.push({});
+    }
+
+    return this._paginate(this.getUserFollowedBy, args, options);
   }
 
   getSelfRequestedBy() {
