@@ -1,39 +1,121 @@
 
+import fs from 'fs';
 import https from 'https';
 import querystring from 'querystring';
-import Promise from 'bluebird';
-import logger from '../lib/logger';
 import util from 'util';
+import crypto from 'crypto';
+
+import Promise from 'bluebird';
+import uuid from 'node-uuid';
+import request from 'request';
+import FileCookieStore from 'tough-cookie-filestore';
+import _ from 'lodash';
+
+import logger from '../lib/logger';
+import * as constants from './constants';
 
 class InstagramSDK {
-  instagramHost = 'api.instagram.com';
-  apiPath = '/v1';
+  instagramHost = 'i.instagram.com';
+  apiPath = '/api/v1';
 
-  constructor({clientID = null, clientSecret = null, accessToken = null} = {}) {
+  constructor(username, password, cookiesFilePath) {
 
-    if(!clientID && !clientSecret && !accessToken) {
-      throw new Error('You must specify on of: `accessToken` or both `clientID` and `clientSecret`.');
+    if(!username || !password) {
+      throw new Error('You must specify both `username` and `password`.');
     }
 
-    this.clientID = clientID;
-    this.clientSecret = clientSecret;
-    this.accessToken = accessToken;
+    this.isLoggedIn = false;
 
-    //if(!accessToken && (clientID && clientSecret)) {
-    //  this.printLoginUrl();
-    //} else if(accessToken) {
-    //
-    //}
+    this.username = username;
+    this.password = password;
+
+    this.cookiesFilePath = cookiesFilePath;
+
+    if(!fs.existsSync(cookiesFilePath)) {
+      fs.writeFileSync(cookiesFilePath, '');
+    }
+
+    this.jar = request.jar(new FileCookieStore(cookiesFilePath));
+
+    this.uuid = this.generateUUID();
+    this.deviceId = this.generateDeviceId();
   }
 
-  //printLoginUrl() {
-  //  console.log(`https://${this.instagramHost}/oauth/authorize/?client_id=${this.clientID}&redirect_uri=http://poster.loc&response_type=code`);
-  //}
+  generateUUID(hyphens = true) {
+    let UUID = uuid.v4();
 
+    if(!hyphens) {
+      return UUID.replace('-', '');
+    }
+
+    return UUID;
+  }
+
+  generateDeviceId() {
+    return 'android-' + crypto.randomBytes(8).toString('hex');
+  }
+
+  generateSignature(data) {
+    let json = JSON.stringify(data),
+        hash = crypto.createHmac('SHA256', constants.IG_SIG_KEY).update(json).digest('hex');
+
+    return {
+      ig_sig_key_version: constants.SIG_KEY_VERSION,
+      signed_body: `${hash}.${encodeURIComponent(json)}`
+    };
+  }
 
   //////////////////////////
   //// Auth
   //////////////////////////
+
+  login() {
+    return this._request({
+          path: '/si/fetch_headers/',
+          query: {
+            challenge_type: 'signup',
+            guid: this.generateUUID(false)
+          }
+        })
+        .tap(this.extractCSRFToken.bind(this))
+        .then(() => {
+          var postData = {
+                device_id: this.deviceId,
+                guid: this.uuid,
+                username: this.username,
+                password: this.password,
+                csrftoken: this.CSRFToken,
+                login_attempt_count: '0'
+              };
+
+          return this._request({method: 'POST', path: '/accounts/login/', postData: this.generateSignature(postData)})
+              .tap(this.extractCSRFToken.bind(this))
+              .then(this._parseJSON)
+              .then((data) => {
+                if(data.status == 'fail') {
+                  throw new Error(data.message);
+                }
+
+                this.isLoggedIn = true;
+                this.usernameId = data.logged_in_user.pk;
+                this.rankToken = `${this.usernameId}_${this.uuid}`;
+
+                return true;
+              });
+        });
+  }
+
+  extractCSRFToken({res}) {
+    let cookies = this.jar.getCookies(res.request.href),
+        CSRFCookie = _.find(cookies, {key: 'csrftoken'});
+
+    if(!CSRFCookie) {
+      this.CSRFToken = 'missing';
+      return res;
+    }
+
+    this.CSRFToken = CSRFCookie.value;
+  }
 
   requestAccessToken(redirect_uri, code) {
     if(!redirect_uri || !code) {
@@ -491,44 +573,42 @@ class InstagramSDK {
       query.access_token = this.accessToken;
       let contentType = 'application/json',
           headers = {
-            Accept: contentType
+            Accept: contentType,
+            'User-Agent': constants.USER_AGENT
           },
           requestOptions = {
-            hostname: this.instagramHost,
-            path: this.apiPath + path + '?' + querystring.stringify(this._normalizeQueryParams(query)),
-            method
+            baseUrl: `https://${this.instagramHost + this.apiPath}`,
+            url: path,
+            qs: this._normalizeQueryParams(query),
+            method,
+            jar: this.jar
           },
           _postData;
 
       if(postData) {
         _postData = JSON.stringify(postData);
-        headers['Content-Type'] = 'application/json';
-        headers['Content-length'] = _postData.length;
+        requestOptions.json = true;
+        requestOptions.body = postData;
+        //headers['Content-Type'] = 'application/json';
+        //headers['Content-length'] = _postData.length;
         logger.debug('_request: request with postData: %:2j', _postData);
       }
 
       requestOptions.headers = headers;
       logger.debug('_request: request with params: %:2j', requestOptions);
 
-      var request = https.request(requestOptions, (res) => {
-        var resData = '';
+      var req = request(requestOptions, (err, res, resData) => {
+        if(err) {
+          return reject(err);
+        }
 
-        res.on('data', (data) => {
-          resData += data;
-        });
-        res.on('end', () => {
-          logger.debug('_request: rate limit:', res.headers['x-ratelimit-limit']);
-          logger.debug('_request: rate limit remaining:', res.headers['x-ratelimit-remaining']);
-          logger.debug('_request: response statusCode:', res.statusCode);
-          resolve({res, resData});
-        });
-      }).on('error', reject);
+        // FIXME
+        resData = typeof resData == 'object' ? JSON.stringify(resData) : resData;
 
-      if(postData) {
-        request.write(_postData);
-      }
-
-      request.end();
+        logger.debug('_request: response statusCode:', res.statusCode);
+        resolve({res, resData});
+      });
+      console.log('req.headers', req.headers);
     });
   }
 
