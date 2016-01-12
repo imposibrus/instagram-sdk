@@ -18,8 +18,8 @@ class InstagramSDK {
 
   constructor(username, password, cookiesFilePath) {
 
-    if(!username || !password) {
-      throw new Error('You must specify both `username` and `password`.');
+    if(!username || !password || !cookiesFilePath) {
+      throw new Error('You must specify both `username`, `password` and `cookiesFilePath`.');
     }
 
     this.isLoggedIn = false;
@@ -157,7 +157,7 @@ class InstagramSDK {
     return this.getUserRecentMedia(this.usernameId, {count, min_id, max_id});
   }
 
-  _paginate(method = this.getSelfRecentMedia, methodArgs = [], {timeout = 0, paginationProp = 'max_id'} = {}) {
+  _paginate(method = this.getSelfRecentMedia, methodArgs = [], {timeout = 0, paginationProp = 'max_id', dataProp = 'items'} = {}) {
     return new Promise((resolve, reject) => {
       var data = [],
           request = (max_id, cb) => {
@@ -170,11 +170,11 @@ class InstagramSDK {
             }
 
             method.call(this, ...methodArgs).then((resp) => {
-              if(!resp.meta || resp.meta.code != 200) {
+              if(resp.status != 'ok') {
                 return reject('Invalid response: ' + JSON.stringify(resp));
               }
 
-              data = data.concat(resp.data);
+              data = data.concat(resp[dataProp]);
               if(resp.pagination && resp.pagination['next_' + paginationProp]) {
                 setTimeout(() => {
                   request(resp.pagination['next_' + paginationProp], cb);
@@ -196,8 +196,33 @@ class InstagramSDK {
     });
   }
 
-  getSelfAllMedia(args, options) {
-    return this._paginate(this.getSelfRecentMedia, args, options);
+  getSelfAllMedia(args, {timeout = 0} = {}) {
+    return new Promise((resolve, reject) => {
+      var data = [],
+          request = (max_id, cb) => {
+            args[0]['max_id'] = max_id;
+
+            this.getSelfRecentMedia.call(this, ...args).then((resp) => {
+              if(resp.status != 'ok') {
+                return reject('Invalid response: ' + JSON.stringify(resp));
+              }
+
+              data = data.concat(resp.items || []);
+              if(resp.items && resp.items.length) {
+                setTimeout(() => {
+                  request(resp.items.slice(-1)[0].id, cb);
+                }, timeout);
+              } else {
+                cb(data);
+              }
+            }).catch((err) => {
+              logger.critical('trace', err);
+              reject(err);
+            });
+          };
+
+      request(null, resolve);
+    });
   }
 
   //getSelfRecentLikes({count = 10, max_like_id = undefined} = {}) {
@@ -227,6 +252,7 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    // test/fixtures/userFeed.json
     return this._request({path: `/feed/user/${userID}/`, query: {count, min_id, max_id}}).then(InstagramSDK._parseJSON);
   }
 
