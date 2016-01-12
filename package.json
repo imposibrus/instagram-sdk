@@ -40,7 +40,7 @@
     "lodash": "3.10.1",
     "node-uuid": "1.4.7",
     "request": "2.67.0",
-    "tough-cookie-filestore": "0.0.1"
+    "tough-cookie-filestore": "github:imposibrus/tough-cookie-filestore"
   },
   "devDependencies": {
     "babel-core": "^6.1.4",
