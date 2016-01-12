@@ -1,7 +1,5 @@
 
 import fs from 'fs';
-import https from 'https';
-import querystring from 'querystring';
 import util from 'util';
 import crypto from 'crypto';
 
