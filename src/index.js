@@ -276,6 +276,7 @@ class InstagramSDK {
 
   getSelfAllFollows(args, options) {
     options.paginationProp = 'max_id';
+    options.dataProp = 'users';
 
     if(args.length == 0) {
       args.push({});
@@ -300,6 +301,7 @@ class InstagramSDK {
 
   getUserAllFollows(args, options) {
     options.paginationProp = 'max_id';
+    options.dataProp = 'users';
 
     if(args.length == 1) {
       args.push({});
@@ -315,6 +317,7 @@ class InstagramSDK {
 
   getSelfAllFollowedBy(args, options) {
     options.paginationProp = 'max_id';
+    options.dataProp = 'users';
 
     if(args.length == 0) {
       args.push({});
@@ -335,6 +338,7 @@ class InstagramSDK {
 
   getUserAllFollowers(args, options) {
     options.paginationProp = 'max_id';
+    options.dataProp = 'users';
 
     if(args.length == 1) {
       args.push({});
