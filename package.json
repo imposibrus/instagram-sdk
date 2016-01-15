@@ -1,6 +1,6 @@
 {
   "name": "instagram-sdk",
-  "version": "1.0.5",
+  "version": "2.0.2",
   "description": "Instagram unofficial SDK.",
   "keywords": [
     "instagram",
@@ -37,7 +37,10 @@
   "dependencies": {
     "bluebird": "^3.0.5",
     "intel": "^1.0.2",
-    "lodash": "3.10.1"
+    "lodash": "3.10.1",
+    "node-uuid": "1.4.7",
+    "request": "2.67.0",
+    "tough-cookie-filestore": "github:imposibrus/tough-cookie-filestore"
   },
   "devDependencies": {
     "babel-core": "^6.1.4",

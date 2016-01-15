@@ -3,7 +3,7 @@ var gulp = require('gulp'),
     babel = require('gulp-babel');
 
 gulp.task('compile', function() {
-  return gulp.src(['src/index.js'])
+  return gulp.src(['src/index.js', 'src/constants.js'])
       .pipe(babel())
       .pipe(gulp.dest('dst'))
       .on('error', console.error);
