@@ -95,7 +95,7 @@ class InstagramSDK {
 
   login() {
     if(this.isLoggedIn) {
-      return Promise.resolve();
+      return Promise.resolve(this);
     }
 
     return this._request({
