@@ -94,6 +94,10 @@ class InstagramSDK {
   //////////////////////////
 
   login() {
+    if(this.isLoggedIn) {
+      return Promise.resolve();
+    }
+
     return this._request({
           path: '/si/fetch_headers/',
           query: {
