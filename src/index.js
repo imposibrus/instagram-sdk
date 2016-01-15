@@ -16,7 +16,7 @@ class InstagramSDK {
   instagramHost = 'i.instagram.com';
   apiPath = '/api/v1';
 
-  constructor(username, password, cookiesFilePath) {
+  constructor(username, password, cookiesFilePath, options = {}) {
 
     if(!username || !password || !cookiesFilePath) {
       throw new Error('You must specify both `username`, `password` and `cookiesFilePath`.');
@@ -34,6 +34,16 @@ class InstagramSDK {
     }
 
     this.jar = request.jar(new FileCookieStore(this.cookiesFilePath));
+
+    var allowedOptions = new Set(['deviceId', 'uuid', 'CSRFToken', 'isLoggedIn', 'usernameId', 'rankToken']);
+
+    if(options) {
+      for(let key in options) {
+        if(options.hasOwnProperty(key) && allowedOptions.has(key)) {
+          this[key] = options[key];
+        }
+      }
+    }
 
     this.uuid = InstagramSDK.generateUUID();
     this.deviceId = InstagramSDK.generateDeviceId();
@@ -114,7 +124,14 @@ class InstagramSDK {
                 this.usernameId = data.logged_in_user.pk;
                 this.rankToken = `${this.usernameId}_${this.uuid}`;
 
-                return true;
+                return {
+                  deviceId: this.deviceId,
+                  uuid: this.uuid,
+                  CSRFToken: this.CSRFToken,
+                  isLoggedIn: this.isLoggedIn,
+                  usernameId: this.usernameId,
+                  rankToken: this.rankToken
+                };
               });
         });
   }
@@ -711,10 +728,7 @@ class InstagramSDK {
 
   _request({method = 'GET', path = '/users/self', postData, query = {}} = {}) {
     return new Promise((resolve, reject) => {
-      query.access_token = this.accessToken;
-      let /*contentType = 'application/json',
-          */headers = {
-            //Accept: contentType,
+      let headers = {
             'User-Agent': constants.USER_AGENT,
             'X-IG-Connection-Type': 'WIFI',
             'X-IG-Capabilities': 'nQ==',
@@ -731,10 +745,7 @@ class InstagramSDK {
 
       if(postData) {
         _postData = JSON.stringify(postData);
-        //requestOptions.json = true;
         requestOptions.form = postData;
-        //headers['Content-Type'] = 'application/json';
-        //headers['Content-length'] = _postData.length;
         logger.debug('_request: request with postData: %:2j', _postData);
       }
 
