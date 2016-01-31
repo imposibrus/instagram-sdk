@@ -37,6 +37,9 @@ class InstagramSDK {
 
     var allowedOptions = new Set(['deviceId', 'uuid', 'CSRFToken', 'isLoggedIn', 'usernameId', 'rankToken']);
 
+    this.uuid = InstagramSDK.generateUUID();
+    this.deviceId = InstagramSDK.generateDeviceId();
+
     if(options) {
       for(let key in options) {
         if(options.hasOwnProperty(key) && allowedOptions.has(key)) {
@@ -44,9 +47,6 @@ class InstagramSDK {
         }
       }
     }
-
-    this.uuid = InstagramSDK.generateUUID();
-    this.deviceId = InstagramSDK.generateDeviceId();
   }
 
   //////////////////////////
@@ -743,9 +743,14 @@ class InstagramSDK {
             url: path,
             qs: InstagramSDK._normalizeQueryParams(query),
             method,
-            jar: this.jar
+            jar: this.jar,
+            timeout: 5000
           },
           _postData;
+
+      if(this.proxy) {
+        requestOptions.proxy = `http://${this.proxy.ip}:${this.proxy.port}`;
+      }
 
       if(postData) {
         _postData = JSON.stringify(postData);
