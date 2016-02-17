@@ -97,14 +97,7 @@ class InstagramSDK {
 
   login(force = false) {
     if(this.isLoggedIn && !force) {
-      return Promise.resolve({
-        deviceId: this.deviceId,
-        uuid: this.uuid,
-        CSRFToken: this.CSRFToken,
-        isLoggedIn: this.isLoggedIn,
-        usernameId: this.usernameId,
-        rankToken: this.rankToken
-      });
+      return Promise.resolve(this);
     }
 
     return this._request({
