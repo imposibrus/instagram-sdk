@@ -45,32 +45,32 @@ describe('Public endpoints', function() {
       instagramSDK.CSRFToken = 'CSRFToken';
       return Promise.resolve();
     });
-    sinon.stub(InstagramSDK, '_parseJSON', Promise.resolve);
+    sinon.stub(instagramSDK, '_parseJSON', Promise.resolve);
   });
   after(function() {
     instagramSDK._request.restore();
     instagramSDK.extractCSRFToken.restore();
-    InstagramSDK._parseJSON.restore();
+    instagramSDK._parseJSON.restore();
     fs.unlinkSync(path.join(__dirname, 'cookiesFilePath.json'));
   });
 
   describe('Login', () => {
     before(() => {
-      InstagramSDK._parseJSON.restore();
-      sinon.stub(InstagramSDK, '_parseJSON', () => {
+      instagramSDK._parseJSON.restore();
+      sinon.stub(instagramSDK, '_parseJSON', () => {
         return Promise.resolve({status: 'ok', logged_in_user: {pk: '123'}});
       });
     });
     after(() => {
-      InstagramSDK._parseJSON.restore();
-      sinon.stub(InstagramSDK, '_parseJSON', Promise.resolve);
+      instagramSDK._parseJSON.restore();
+      sinon.stub(instagramSDK, '_parseJSON', Promise.resolve);
     });
 
     it('should login', function(done) {
       instagramSDK.login().then(() => {
         sinon.assert.calledTwice(instagramSDK._request);
         sinon.assert.calledTwice(instagramSDK.extractCSRFToken);
-        sinon.assert.calledOnce(InstagramSDK._parseJSON);
+        sinon.assert.calledOnce(instagramSDK._parseJSON);
         instagramSDK.should.have.properties(['deviceId', 'uuid', 'CSRFToken', 'isLoggedIn', 'usernameId', 'rankToken']);
         done();
       }).catch(done);

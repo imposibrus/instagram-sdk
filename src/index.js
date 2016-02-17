@@ -120,7 +120,7 @@ class InstagramSDK {
 
           return this._request({method: 'POST', path: '/accounts/login/', postData: InstagramSDK.generateSignature(postData)})
               .tap(this.extractCSRFToken.bind(this))
-              .then(InstagramSDK._parseJSON)
+              .then(this._parseJSON.bind(this))
               .then((data) => {
                 if(data.status == 'fail') {
                   throw new Error(data.message);
@@ -166,7 +166,7 @@ class InstagramSDK {
         username: username,
         _csrftoken: 'missing'
       })
-    }).then(InstagramSDK._parseJSON);
+    }).then(this._parseJSON.bind(this));
   }
 
   //////////////////////////
@@ -258,7 +258,7 @@ class InstagramSDK {
     }
 
     // test/fixtures/userInfo.json
-    return this._request({path: `/users/${userID}/info/`}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/users/${userID}/info/`}).then(this._parseJSON.bind(this));
   }
 
   getUserRecentMedia(userID, {count = 10, min_id = undefined, max_id = undefined} = {}) {
@@ -271,7 +271,7 @@ class InstagramSDK {
     }
 
     // test/fixtures/userFeed.json
-    return this._request({path: `/feed/user/${userID}/`, query: {count, min_id, max_id}}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/feed/user/${userID}/`, query: {count, min_id, max_id}}).then(this._parseJSON.bind(this));
   }
 
   getUserAllMedia(args, options) {
@@ -280,7 +280,7 @@ class InstagramSDK {
 
   usersSearch({q = '', count = 10} = {}) {
     // test/fixtures/usersSearch.json
-    return this._request({path: '/users/search/', query: {q, count, rank_token: this.rankToken}}).then(InstagramSDK._parseJSON);
+    return this._request({path: '/users/search/', query: {q, count, rank_token: this.rankToken}}).then(this._parseJSON.bind(this));
   }
 
   //////////////////////////
@@ -314,7 +314,7 @@ class InstagramSDK {
 
     query.rank_token = this.rankToken;
 
-    return this._request({path: `/friendships/${userID}/following/`, query}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/friendships/${userID}/following/`, query}).then(this._parseJSON.bind(this));
   }
 
   getUserAllFollows(args, options) {
@@ -351,7 +351,7 @@ class InstagramSDK {
 
     query.rank_token = this.rankToken;
 
-    return this._request({path: `/friendships/${userID}/followers/`, query}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/friendships/${userID}/followers/`, query}).then(this._parseJSON.bind(this));
   }
 
   getUserAllFollowers(args, options) {
@@ -371,7 +371,7 @@ class InstagramSDK {
     }
 
     // {"status":"ok","incoming_request":false,"outgoing_request":false,"following":false,"followed_by":false,"blocking":false,"is_private":false}
-    return this._request({path: `/friendships/show/${userID}/`}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/friendships/show/${userID}/`}).then(this._parseJSON.bind(this));
   }
 
   getUsersRelationships(usersIDS) {
@@ -388,7 +388,7 @@ class InstagramSDK {
         _uuid: this.uuid,
         _csrftoken: this.CSRFToken
       }
-    }).then(InstagramSDK._parseJSON);
+    }).then(this._parseJSON.bind(this));
   }
 
   followUser(userID) {
@@ -409,7 +409,7 @@ class InstagramSDK {
         user_id: userID,
         _csrftoken: this.CSRFToken
       })
-    }).then(InstagramSDK._parseJSON);
+    }).then(this._parseJSON.bind(this));
   }
 
   unFollowUser(userID) {
@@ -430,7 +430,7 @@ class InstagramSDK {
         user_id: userID,
         _csrftoken: this.CSRFToken
       })
-    }).then(InstagramSDK._parseJSON);
+    }).then(this._parseJSON.bind(this));
   }
 
   //////////////////////////
@@ -446,7 +446,7 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
-    return this._request({path: `/media/${mediaID}/info/`}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/media/${mediaID}/info/`}).then(this._parseJSON.bind(this));
   }
 
   getCommentsForMedia(mediaID) {
@@ -459,7 +459,7 @@ class InstagramSDK {
     }
 
     // test/fixtures/mediaComments.json
-    return this._request({path: `/media/${mediaID}/comments/`}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/media/${mediaID}/comments/`}).then(this._parseJSON.bind(this));
   }
 
   getLikesForMedia(mediaID) {
@@ -468,7 +468,7 @@ class InstagramSDK {
     }
 
     // test/fixtures/likers.json
-    return this._request({path: `/media/${mediaID}/likers/`}).then(InstagramSDK._parseJSON);
+    return this._request({path: `/media/${mediaID}/likers/`}).then(this._parseJSON.bind(this));
   }
 
   addLikeForMedia(mediaID) {
@@ -486,7 +486,7 @@ class InstagramSDK {
         _csrftoken: this.CSRFToken,
         media_id: mediaID
       })
-    }).then(InstagramSDK._parseJSON);
+    }).then(this._parseJSON.bind(this));
   }
 
   removeLikeForMedia(mediaID) {
@@ -504,11 +504,11 @@ class InstagramSDK {
         _csrftoken: this.CSRFToken,
         media_id: mediaID
       })
-    }).then(InstagramSDK._parseJSON);
+    }).then(this._parseJSON.bind(this));
   }
 
   tagsSearch(q = '', count = 20) {
-    return this._request({path: '/tags/search/', query: {q, count, rank_token: this.rankToken}}).then(InstagramSDK._parseJSON);
+    return this._request({path: '/tags/search/', query: {q, count, rank_token: this.rankToken}}).then(this._parseJSON.bind(this));
   }
 
   _getHeaderValue(headerName) {
@@ -517,7 +517,7 @@ class InstagramSDK {
     };
   }
 
-  static _parseJSON({res, resData} = {}) {
+  _parseJSON({res, resData} = {}) {
     var resJSON = {};
 
     if(res.statusCode == 204) {
@@ -534,7 +534,7 @@ class InstagramSDK {
     if(resJSON.message == 'login_required' && this.failsCount < 3) {
       this.failsCount++;
       return this.login(true).then(() => {
-        return this._request(this.last_requestArgs).then(InstagramSDK._parseJSON);
+        return this._request(this.last_requestArgs).then(this._parseJSON.bind(this));
       });
     }
 
