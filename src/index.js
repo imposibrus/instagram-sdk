@@ -37,6 +37,8 @@ class InstagramSDK {
 
     var allowedOptions = new Set(['deviceId', 'uuid', 'CSRFToken', 'isLoggedIn', 'usernameId', 'rankToken']);
 
+    this.failsCount = 0;
+
     this.uuid = InstagramSDK.generateUUID();
     this.deviceId = InstagramSDK.generateDeviceId();
 
@@ -93,9 +95,16 @@ class InstagramSDK {
   //// Auth
   //////////////////////////
 
-  login() {
-    if(this.isLoggedIn) {
-      return Promise.resolve(this);
+  login(force = false) {
+    if(this.isLoggedIn && !force) {
+      return Promise.resolve({
+        deviceId: this.deviceId,
+        uuid: this.uuid,
+        CSRFToken: this.CSRFToken,
+        isLoggedIn: this.isLoggedIn,
+        usernameId: this.usernameId,
+        rankToken: this.rankToken
+      });
     }
 
     return this._request({
@@ -171,6 +180,10 @@ class InstagramSDK {
   //// Users
   //////////////////////////
   getSelf() {
+    if(!this.isLoggedIn) {
+      throw new Error('You must be logged in.');
+    }
+
     return this.getUser(this.usernameId);
   }
 
@@ -245,15 +258,6 @@ class InstagramSDK {
       request(null, resolve);
     });
   }
-
-  //getSelfRecentLikes({count = 10, max_like_id = undefined} = {}) {
-  //  return this._request({path: '/users/self/media/liked', query: {count, max_like_id}}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //getSelfAllLikes(args, options) {
-  //  options.paginationProp = 'max_like_id';
-  //  return this._paginate(this.getSelfRecentLikes, args, options);
-  //}
 
   getUser(userID) {
     if(!userID) {
@@ -368,10 +372,6 @@ class InstagramSDK {
     return this._paginate(this.getUserFollowers, args, options);
   }
 
-  //getSelfRequestedBy() {
-  //  return this._request({path: '/users/self/requested-by'}).then(InstagramSDK._parseJSON);
-  //}
-
   getUserRelationship(userID) {
     if(!userID) {
       throw new Error('Argument `userID` is required.');
@@ -456,22 +456,6 @@ class InstagramSDK {
     return this._request({path: `/media/${mediaID}/info/`}).then(InstagramSDK._parseJSON);
   }
 
-  //getMediaInfoByShortCode(shortCode) {
-  //  if(!shortCode) {
-  //    throw new Error('Argument `shortCode` is required.');
-  //  }
-  //
-  //  return this._request({path: `/media/shortcode/${shortCode}`}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //mediaSearch({lat = 0, lng = 0, distance = 10} = {}) {
-  //  return this._request({path: '/media/search', query: {lat, lng, distance}}).then(InstagramSDK._parseJSON);
-  //}
-
-  //////////////////////////
-  //// Comments
-  //////////////////////////
-
   getCommentsForMedia(mediaID) {
     if(!mediaID) {
       throw new Error('Argument `mediaID` is required.');
@@ -484,34 +468,6 @@ class InstagramSDK {
     // test/fixtures/mediaComments.json
     return this._request({path: `/media/${mediaID}/comments/`}).then(InstagramSDK._parseJSON);
   }
-
-  //addCommentForMedia(mediaID, text) {
-  //  if(!mediaID) {
-  //    throw new Error('Argument `mediaID` is required.');
-  //  }
-  //
-  //  if(!text) {
-  //    throw new Error('Argument `text` is required.');
-  //  }
-  //
-  //  return this._request({method: 'POST', path: `/media/${mediaID}/comments`, postData: {text}}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //removeCommentForMedia(mediaID, commentId) {
-  //  if(!mediaID) {
-  //    throw new Error('Argument `mediaID` is required.');
-  //  }
-  //
-  //  if(!commentId) {
-  //    throw new Error('Argument `commentId` is required.');
-  //  }
-  //
-  //  return this._request({method: 'DELETE', path: `/media/${mediaID}/comments/${commentId}`}).then(InstagramSDK._parseJSON);
-  //}
-
-  //////////////////////////
-  //// Likes
-  //////////////////////////
 
   getLikesForMedia(mediaID) {
     if(!mediaID) {
@@ -558,139 +514,9 @@ class InstagramSDK {
     }).then(InstagramSDK._parseJSON);
   }
 
-  //////////////////////////
-  //// Tags
-  //////////////////////////
-
-  //getTagInfoByTagName(tagName) {
-  //  if(!tagName) {
-  //    throw new Error('Argument `tagName` is required.');
-  //  }
-  //
-  //  return this._request({path: `/tags/${tagName}`}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //getRecentMediaForTagName(tagName, {count = 10, min_tag_id = undefined, max_tag_id = undefined} = {}) {
-  //  if(!tagName) {
-  //    throw new Error('Argument `tagName` is required.');
-  //  }
-  //
-  //  return this._request({path: `/tags/${tagName}/media/recent`, query: {count, min_tag_id, max_tag_id}}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //getAllMediaForTagName(args, options) {
-  //  options.paginationProp = 'max_tag_id';
-  //  return this._paginate(this.getRecentMediaForTagName, args, options);
-  //}
-
   tagsSearch(q = '', count = 20) {
     return this._request({path: '/tags/search/', query: {q, count, rank_token: this.rankToken}}).then(InstagramSDK._parseJSON);
   }
-
-  //////////////////////////
-  //// Locations
-  //////////////////////////
-
-  //getLocationInfoByLocationId(locationId) {
-  //  if(!locationId) {
-  //    throw new Error('Argument `locationId` is required.');
-  //  }
-  //
-  //  return this._request({path: `/locations/${locationId}`}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //getRecentMediaForLocationId(locationId, {count = 10, min_id = undefined, max_id = undefined} = {}) {
-  //  if(!locationId) {
-  //    throw new Error('Argument `locationId` is required.');
-  //  }
-  //
-  //  return this._request({path: `/locations/${locationId}/media/recent`, query: {count, min_id, max_id}}).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //getAllMediaForLocationId(args, options) {
-  //  options.paginationProp = 'max_id';
-  //  return this._paginate(this.getRecentMediaForLocationId, args, options);
-  //}
-  //
-  //locationsSearch({
-  //    distance = 1000,
-  //    facebook_places_id = undefined,
-  //    foursquare_id = undefined,
-  //    lat = undefined,
-  //    lng = undefined,
-  //    foursquare_v2_id = undefined
-  //    } = {}) {
-  //
-  //  return this._request({
-  //    path: '/locations/search',
-  //    query: {
-  //      distance,
-  //      facebook_places_id,
-  //      foursquare_id,
-  //      lat,
-  //      lng,
-  //      foursquare_v2_id
-  //    }
-  //  }).then(InstagramSDK._parseJSON);
-  //}
-
-  //////////////////////////
-  //// Embedding
-  //////////////////////////
-
-  //getMediaJPGByShortCode(shortCode) {
-  //  if(!shortCode) {
-  //    throw new Error('Argument `shortCode` is required.');
-  //  }
-  //
-  //  return this._request({path: `/p/${shortCode}/media`}).then(this._getHeaderValue('Location'));
-  //}
-
-  //////////////////////////
-  //// Subscriptions
-  //////////////////////////
-
-  //addSubscription({object = undefined, aspect = undefined, verify_token = undefined, callback_url = undefined} = {}) {
-  //  if(!object || !aspect || !callback_url) {
-  //    throw new Error('Arguments `object`, `aspect` and `callback_url` is required.');
-  //  }
-  //
-  //  return this._request({
-  //    method: 'POST',
-  //    path: '/subscriptions',
-  //    postData: {
-  //      object,
-  //      aspect,
-  //      verify_token,
-  //      callback_url,
-  //      client_id: this.clientID,
-  //      client_secret: this.clientSecret
-  //    }
-  //  }).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //getSubscriptions() {
-  //  return this._request({
-  //    path: '/subscriptions',
-  //    query: {
-  //      client_id: this.clientID,
-  //      client_secret: this.clientSecret
-  //    }
-  //  }).then(InstagramSDK._parseJSON);
-  //}
-  //
-  //removeSubscription({object = undefined, id = undefined} = {}) {
-  //  return this._request({
-  //    method: 'DELETE',
-  //    path: '/subscriptions',
-  //    query: {
-  //      client_id: this.clientID,
-  //      client_secret: this.clientSecret,
-  //      object,
-  //      id
-  //    }
-  //  }).then(InstagramSDK._parseJSON);
-  //}
 
   _getHeaderValue(headerName) {
     return ({res} = {}) => {
@@ -699,7 +525,6 @@ class InstagramSDK {
   }
 
   static _parseJSON({res, resData} = {}) {
-    console.log('_parseJSON called');
     var resJSON = {};
 
     if(res.statusCode == 204) {
@@ -712,6 +537,15 @@ class InstagramSDK {
       logger.debug('_parseJSON: invalid response:', resData);
       return Promise.reject(new Error('Invalid JSON response:' + resData));
     }
+
+    if(resJSON.message == 'login_required' && this.failsCount < 3) {
+      this.failsCount++;
+      return this.login(true).then(() => {
+        return this._request(this.last_requestArgs).then(InstagramSDK._parseJSON);
+      });
+    }
+
+    this.failsCount = 0;
 
     logger.debug('_parseJSON: response: %.-500s', util.inspect(resJSON));
     return Promise.resolve(resJSON);
@@ -745,23 +579,26 @@ class InstagramSDK {
             method,
             jar: this.jar,
             timeout: 5000
-          },
-          _postData;
+          };
 
       if(this.proxy) {
         requestOptions.proxy = `http://${this.proxy.ip}:${this.proxy.port}`;
       }
 
       if(postData) {
-        _postData = JSON.stringify(postData);
         requestOptions.form = postData;
-        logger.debug('_request: request with postData: %:2j', _postData);
+        logger.debug('_request: request with postData: %:2j', postData);
       }
 
       requestOptions.headers = headers;
       logger.debug('_request: request with params: %:2j', requestOptions);
 
-      var req = request(requestOptions, (err, res, resData) => {
+      // this.lastRequestOptions = requestOptions;
+      this.last_requestArgs = {method, path, postData, query};
+
+      var requester = request[method.toLowerCase()];
+
+      requester(requestOptions, (err, res, resData) => {
         if(err) {
           return reject(err);
         }
@@ -769,52 +606,9 @@ class InstagramSDK {
         logger.debug('_request: response statusCode:', res.statusCode);
         resolve({res, resData});
       });
-      console.log('req.headers', req.headers);
     });
   }
 
-  //_oAuth({method = 'POST', path = '/access_token', postData} = {}) {
-  //  return new Promise((resolve, reject) => {
-  //    let contentType = 'application/json',
-  //        headers = {
-  //          Accept: contentType
-  //        },
-  //        requestOptions = {
-  //          hostname: this.instagramHost,
-  //          path: `/oauth${path}`,
-  //          method
-  //        },
-  //        _postData;
-  //
-  //    if(postData) {
-  //      _postData = querystring.stringify(postData);
-  //      headers['Content-Type'] = 'application/x-www-form-urlencoded';
-  //      headers['Content-length'] = _postData.length;
-  //      logger.debug('_oAuth: request with postData: %:2j', _postData);
-  //    }
-  //
-  //    requestOptions.headers = headers;
-  //    logger.debug('_oAuth: request with params: %:2j', requestOptions);
-  //
-  //    var request = https.request(requestOptions, (res) => {
-  //      var resData = '';
-  //
-  //      res.on('data', (data) => {
-  //        resData += data;
-  //      });
-  //      res.on('end', () => {
-  //        logger.debug('_oAuth: response statusCode:', res.statusCode);
-  //        resolve({res, resData});
-  //      });
-  //    }).on('error', reject);
-  //
-  //    if(postData) {
-  //      request.write(_postData);
-  //    }
-  //
-  //    request.end();
-  //  });
-  //}
 }
 
 export default InstagramSDK;
