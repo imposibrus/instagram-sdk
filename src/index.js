@@ -2,6 +2,7 @@
 import fs from 'fs';
 import util from 'util';
 import crypto from 'crypto';
+import {Readable as Readable} from 'stream';
 
 import Promise from 'bluebird';
 import uuid from 'node-uuid';
@@ -223,6 +224,53 @@ class InstagramSDK {
     });
   }
 
+  _stream(method = this.getSelfRecentMedia, methodArgs = [], {timeout = 0, paginationProp = 'max_id', dataProp = 'items'} = {}) {
+    var rs = new Readable({
+      objectMode: true,
+      read: () => {}
+    });
+
+    var request = (max_id) => {
+      if(methodArgs.length == 1) {
+        methodArgs[0][paginationProp] = max_id;
+      } else {
+        var lastArg = methodArgs.slice(-1)[0];
+        lastArg[paginationProp] = max_id;
+        methodArgs.splice(-1, 1, lastArg);
+      }
+
+      method.call(this, ...methodArgs).then((resp) => {
+        var items = resp[dataProp];
+
+        if(resp.status != 'ok' || !_.isArray(items)) {
+          return rs.emit('error', new Error('Invalid response: ' + JSON.stringify(resp)));
+        }
+
+        for(var i = 0; i < items.length; i++) {
+          rs.push(items[i]);
+        }
+
+        if(resp.pagination && resp.pagination['next_' + paginationProp]) {
+          setTimeout(() => {
+            request(resp.pagination['next_' + paginationProp]);
+          }, timeout);
+        } else if(resp['next_' + paginationProp]) {
+          setTimeout(() => {
+            request(resp['next_' + paginationProp]);
+          }, timeout);
+        } else {
+          rs.push(null);
+        }
+      }).catch((err) => {
+        logger.critical('trace', err);
+        rs.emit('error', err);
+      });
+    };
+
+    request(null);
+    return rs;
+  }
+
   getSelfAllMedia(args, {timeout = 0} = {}) {
     return new Promise((resolve, reject) => {
       var data = [],
@@ -303,6 +351,17 @@ class InstagramSDK {
     return this._paginate(this.getSelfFollows, args, options);
   }
 
+  getSelfFollowsStream(args, options) {
+    options.paginationProp = 'max_id';
+    options.dataProp = 'users';
+
+    if(args.length == 0) {
+      args.push({});
+    }
+
+    return this._stream(this.getSelfFollows, args, options);
+  }
+
   getUserFollows(userID, query = {}) {
     if(!userID) {
       throw new Error('Argument `userID` is required.');
@@ -328,10 +387,23 @@ class InstagramSDK {
     return this._paginate(this.getUserFollows, args, options);
   }
 
+  getUserFollowsStream(args, options) {
+    options.paginationProp = 'max_id';
+    options.dataProp = 'users';
+
+    if(args.length == 1) {
+      args.push({});
+    }
+
+    return this._stream(this.getUserFollows, args, options);
+  }
+
   // followers
   getSelfFollowedBy(query = {}) {
     return this.getUserFollowers(this.usernameId, query);
   }
+
+  getSelfFollowers = this.getSelfFollowedBy;
 
   getSelfAllFollowedBy(args, options) {
     options.paginationProp = 'max_id';
@@ -342,6 +414,19 @@ class InstagramSDK {
     }
 
     return this._paginate(this.getSelfFollowedBy, args, options);
+  }
+
+  getSelfAllFollowers = this.getSelfAllFollowedBy;
+
+  getSelfFollowersStream(args, options) {
+    options.paginationProp = 'max_id';
+    options.dataProp = 'users';
+
+    if(args.length == 0) {
+      args.push({});
+    }
+
+    return this._stream(this.getSelfFollowedBy, args, options);
   }
 
   getUserFollowers(userID, query = {}) {
@@ -363,6 +448,17 @@ class InstagramSDK {
     }
 
     return this._paginate(this.getUserFollowers, args, options);
+  }
+
+  getUserFollowersStream(args, options) {
+    options.paginationProp = 'max_id';
+    options.dataProp = 'users';
+
+    if(args.length == 1) {
+      args.push({});
+    }
+
+    return this._stream(this.getUserFollowers, args, options);
   }
 
   getUserRelationship(userID) {
@@ -584,7 +680,7 @@ class InstagramSDK {
       }
 
       requestOptions.headers = headers;
-      logger.debug('_request: request with params: %:2j', requestOptions);
+      logger.debug('_request: request with params: %:2j', _.omit(requestOptions, ['jar']));
 
       // this.lastRequestOptions = requestOptions;
       this.last_requestArgs = {method, path, postData, query};
