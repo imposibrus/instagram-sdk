@@ -227,8 +227,24 @@ class InstagramSDK {
   _stream(method = this.getSelfRecentMedia, methodArgs = [], {timeout = 0, paginationProp = 'max_id', dataProp = 'items'} = {}) {
     var rs = new Readable({
       objectMode: true,
-      read: () => {}
+      read: () => {
+        if(rs._closing) {
+          return false;
+        }
+      }
     });
+
+    rs._closing = false;
+    rs.close = () => {
+      rs._closing = true;
+      process.nextTick(() => {
+        rs.push(null);
+        // hacking private API :(
+        rs._readableState.ended = true;
+        rs._readableState.length = 0;
+        rs._readableState.buffer = [];
+      });
+    };
 
     var request = (max_id) => {
       if(methodArgs.length == 1) {
@@ -247,7 +263,14 @@ class InstagramSDK {
         }
 
         for(var i = 0; i < items.length; i++) {
+          if(rs._closing) {
+            break;
+          }
           rs.push(items[i]);
+        }
+
+        if(rs._closing) {
+          return false;
         }
 
         if(resp.pagination && resp.pagination['next_' + paginationProp]) {
@@ -259,7 +282,11 @@ class InstagramSDK {
             request(resp['next_' + paginationProp]);
           }, timeout);
         } else {
-          rs.push(null);
+          if(!rs._closing) {
+            process.nextTick(() => {
+              rs.push(null);
+            });
+          }
         }
       }).catch((err) => {
         logger.critical('trace', err);
