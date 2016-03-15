@@ -12,6 +12,7 @@ import _ from 'lodash';
 
 import logger from '../lib/logger';
 import * as constants from './constants';
+import CustomError from '../lib/CustomError';
 
 class InstagramSDK {
   instagramHost = 'i.instagram.com';
@@ -124,7 +125,7 @@ class InstagramSDK {
               .then(this._parseJSON.bind(this))
               .then((data) => {
                 if(data.status == 'fail') {
-                  throw new Error(data.message);
+                  throw new LoginError(data.message);
                 }
 
                 this.isLoggedIn = true;
@@ -728,3 +729,5 @@ class InstagramSDK {
 }
 
 export default InstagramSDK;
+
+export var LoginError = CustomError('LoginError');
