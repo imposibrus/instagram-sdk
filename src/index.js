@@ -124,8 +124,8 @@ class InstagramSDK {
               .tap(this.extractCSRFToken.bind(this))
               .then(this._parseJSON.bind(this))
               .then((data) => {
-                if(data.status == 'fail') {
-                  throw new LoginError(data.message);
+                if(data.status == 'fail' || (_.isObject(data.errors) && !_.isEmpty(data.errors))) {
+                  throw new LoginError(data.message || data.errors || data);
                 }
 
                 this.isLoggedIn = true;
@@ -199,7 +199,7 @@ class InstagramSDK {
             }
 
             method.call(this, ...methodArgs).then((resp) => {
-              if(resp.status != 'ok') {
+              if(resp.status != 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
                 return reject('Invalid response: ' + JSON.stringify(resp));
               }
 
@@ -306,7 +306,7 @@ class InstagramSDK {
             args[0]['max_id'] = max_id;
 
             this.getSelfRecentMedia.call(this, ...args).then((resp) => {
-              if(resp.status != 'ok') {
+              if(resp.status != 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
                 return reject('Invalid response: ' + JSON.stringify(resp));
               }
 
