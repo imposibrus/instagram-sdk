@@ -1,6 +1,7 @@
 
 import fs from 'fs';
 import util from 'util';
+// import url from 'url';
 import crypto from 'crypto';
 import {Readable as Readable} from 'stream';
 
@@ -9,14 +10,18 @@ import uuid from 'node-uuid';
 import request from 'request';
 import FileCookieStore from 'tough-cookie-filestore';
 import _ from 'lodash';
+// import cheerio from 'cheerio';
 
-import logger from '../lib/logger';
+import _logger from '../lib/logger';
 import * as constants from './constants';
 import CustomError from '../lib/CustomError';
+
+const logger = _logger.getLogger('instagram-sdk');
 
 class InstagramSDK {
   instagramHost = 'i.instagram.com';
   apiPath = '/api/v1';
+  _requestId = InstagramSDK.generateUUID();
 
   constructor(username, password, cookiesFilePath, options = {}) {
 
@@ -179,10 +184,12 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    logger.debug(`(${this._requestId}) getSelf ${this.usernameId}`);
     return this.getUser(this.usernameId);
   }
 
   getSelfRecentMedia({count = 10, min_id = undefined, max_id = undefined} = {}) {
+    logger.debug(`(${this._requestId}) getSelfRecentMedia ${this.usernameId}`);
     return this.getUserRecentMedia(this.usernameId, {count, min_id, max_id});
   }
 
@@ -200,6 +207,7 @@ class InstagramSDK {
 
             method.call(this, ...methodArgs).then((resp) => {
               if(resp.status != 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
+                logger.critical('trace', resp, `(${this._requestId})`);
                 return reject('Invalid response: ' + JSON.stringify(resp));
               }
 
@@ -216,7 +224,7 @@ class InstagramSDK {
                 cb(data);
               }
             }).catch((err) => {
-              logger.critical('trace', err);
+              logger.critical('trace', err, `(${this._requestId})`);
               reject(err);
             });
           };
@@ -260,6 +268,7 @@ class InstagramSDK {
         var items = resp[dataProp];
 
         if(resp.status != 'ok' || !_.isArray(items)) {
+          logger.critical('trace', resp, `(${this._requestId})`);
           return rs.emit('error', new Error('Invalid response: ' + JSON.stringify(resp)));
         }
 
@@ -291,7 +300,7 @@ class InstagramSDK {
         }
       }).catch((err) => {
         logger.critical('trace', err);
-        rs.emit('error', err);
+        rs.emit('error', err, `(${this._requestId})`);
       });
     };
 
@@ -300,6 +309,7 @@ class InstagramSDK {
   }
 
   getSelfAllMedia(args, {timeout = 0} = {}) {
+    logger.debug(`(${this._requestId}) getSelfAllMedia %:2j`, args);
     return new Promise((resolve, reject) => {
       var data = [],
           request = (max_id, cb) => {
@@ -307,6 +317,7 @@ class InstagramSDK {
 
             this.getSelfRecentMedia.call(this, ...args).then((resp) => {
               if(resp.status != 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
+                logger.critical('trace', resp, `(${this._requestId})`);
                 return reject('Invalid response: ' + JSON.stringify(resp));
               }
 
@@ -319,7 +330,7 @@ class InstagramSDK {
                 cb(data);
               }
             }).catch((err) => {
-              logger.critical('trace', err);
+              logger.critical('trace', err, `(${this._requestId})`);
               reject(err);
             });
           };
@@ -333,6 +344,7 @@ class InstagramSDK {
       throw new Error('Argument `userID` is required.');
     }
 
+    logger.debug(`(${this._requestId}) getUser ${userID}`);
     // test/fixtures/userInfo.json
     return this._request({path: `/users/${userID}/info/`}).then(this._parseJSON.bind(this));
   }
@@ -346,15 +358,18 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    logger.debug(`(${this._requestId}) getUserRecentMedia ${userID}`);
     // test/fixtures/userFeed.json
     return this._request({path: `/feed/user/${userID}/`, query: {count, min_id, max_id}}).then(this._parseJSON.bind(this));
   }
 
   getUserAllMedia(args, options) {
+    logger.debug(`(${this._requestId}) getUserAllMedia %:2j`, args);
     return this._paginate(this.getUserRecentMedia, args, options);
   }
 
   usersSearch({q = '', count = 10} = {}) {
+    logger.debug(`(${this._requestId}) usersSearch ${q}`);
     // test/fixtures/usersSearch.json
     return this._request({path: '/users/search/', query: {q, count, rank_token: this.rankToken}}).then(this._parseJSON.bind(this));
   }
@@ -365,6 +380,7 @@ class InstagramSDK {
 
   // followed
   getSelfFollows(query = {}) {
+    logger.debug(`(${this._requestId}) getSelfFollows %:2j`, query);
     return this.getUserFollows(this.usernameId, query);
   }
 
@@ -376,6 +392,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getSelfAllFollows %:2j %:2j`, args, options);
     return this._paginate(this.getSelfFollows, args, options);
   }
 
@@ -387,6 +404,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getSelfFollowsStream %:2j %:2j`, args, options);
     return this._stream(this.getSelfFollows, args, options);
   }
 
@@ -401,6 +419,7 @@ class InstagramSDK {
 
     query.rank_token = this.rankToken;
 
+    logger.debug(`(${this._requestId}) getUserFollows ${userID} %:2j`, query);
     return this._request({path: `/friendships/${userID}/following/`, query}).then(this._parseJSON.bind(this));
   }
 
@@ -412,6 +431,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getUserAllFollows %:2j %:2j`, args, options);
     return this._paginate(this.getUserFollows, args, options);
   }
 
@@ -423,11 +443,13 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getUserFollowsStream %:2j %:2j`, args, options);
     return this._stream(this.getUserFollows, args, options);
   }
 
   // followers
   getSelfFollowedBy(query = {}) {
+    logger.debug(`(${this._requestId}) getSelfFollowedBy %:2j`, query);
     return this.getUserFollowers(this.usernameId, query);
   }
 
@@ -441,6 +463,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getSelfAllFollowedBy %:2j %:2j`, args, options);
     return this._paginate(this.getSelfFollowedBy, args, options);
   }
 
@@ -454,6 +477,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getSelfFollowersStream %:2j %:2j`, args, options);
     return this._stream(this.getSelfFollowedBy, args, options);
   }
 
@@ -464,6 +488,7 @@ class InstagramSDK {
 
     query.rank_token = this.rankToken;
 
+    logger.debug(`(${this._requestId}) getUserFollowers ${userID} %:2j`, query);
     return this._request({path: `/friendships/${userID}/followers/`, query}).then(this._parseJSON.bind(this));
   }
 
@@ -475,6 +500,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getUserAllFollowers %:2j %:2j`, args, options);
     return this._paginate(this.getUserFollowers, args, options);
   }
 
@@ -486,6 +512,7 @@ class InstagramSDK {
       args.push({});
     }
 
+    logger.debug(`(${this._requestId}) getUserFollowersStream %:2j %:2j`, args, options);
     return this._stream(this.getUserFollowers, args, options);
   }
 
@@ -494,6 +521,7 @@ class InstagramSDK {
       throw new Error('Argument `userID` is required.');
     }
 
+    logger.debug(`(${this._requestId}) getUserRelationship ${userID}`);
     // {"status":"ok","incoming_request":false,"outgoing_request":false,"following":false,"followed_by":false,"blocking":false,"is_private":false}
     return this._request({path: `/friendships/show/${userID}/`}).then(this._parseJSON.bind(this));
   }
@@ -503,6 +531,7 @@ class InstagramSDK {
       throw new Error('Argument `usersIDS` is required and must be not empty.');
     }
 
+    logger.debug(`(${this._requestId}) getUsersRelationships %:2j`, usersIDS);
     // test/fixtures/friendshipsMany.json
     return this._request({
       method: 'POST',
@@ -524,6 +553,7 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    logger.debug(`(${this._requestId}) followUser ${userID}`);
     return this._request({
       method: 'POST',
       path: `/friendships/create/${userID}/`,
@@ -545,6 +575,7 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    logger.debug(`(${this._requestId}) unFollowUser ${userID}`);
     return this._request({
       method: 'POST',
       path: `/friendships/destroy/${userID}/`,
@@ -570,6 +601,7 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    logger.debug(`(${this._requestId}) getMediaInfoById ${mediaID}`);
     return this._request({path: `/media/${mediaID}/info/`}).then(this._parseJSON.bind(this));
   }
 
@@ -582,6 +614,7 @@ class InstagramSDK {
       throw new Error('You must be logged in.');
     }
 
+    logger.debug(`(${this._requestId}) getCommentsForMedia ${mediaID}`);
     // test/fixtures/mediaComments.json
     return this._request({path: `/media/${mediaID}/comments/`}).then(this._parseJSON.bind(this));
   }
@@ -591,6 +624,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
+    logger.debug(`(${this._requestId}) getLikesForMedia ${mediaID}`);
     // test/fixtures/likers.json
     return this._request({path: `/media/${mediaID}/likers/`}).then(this._parseJSON.bind(this));
   }
@@ -600,6 +634,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
+    logger.debug(`(${this._requestId}) addLikeForMedia ${mediaID}`);
     // {"status":"ok"}
     return this._request({
       method: 'POST',
@@ -618,6 +653,7 @@ class InstagramSDK {
       throw new Error('Argument `mediaID` is required.');
     }
 
+    logger.debug(`(${this._requestId}) removeLikeForMedia ${mediaID}`);
     // {"status":"ok"}
     return this._request({
       method: 'POST',
@@ -632,6 +668,7 @@ class InstagramSDK {
   }
 
   tagsSearch(q = '', count = 20) {
+    logger.debug(`(${this._requestId}) tagsSearch ${q}`);
     return this._request({path: '/tags/search/', query: {q, count, rank_token: this.rankToken}}).then(this._parseJSON.bind(this));
   }
 
@@ -645,33 +682,41 @@ class InstagramSDK {
     var resJSON = {};
 
     if(res.statusCode == 204) {
+      logger.debug(`(${this._requestId}) _parseJSON: empty response`);
       return Promise.resolve({});
     }
 
     try {
       resJSON = JSON.parse(resData);
     } catch(err) {
-      logger.debug('_parseJSON: invalid response:', resData);
+      logger.debug(`(${this._requestId}) _parseJSON: invalid response:`, resData);
       return Promise.reject(new Error('Invalid JSON response:' + resData));
     }
 
     if(resJSON.message == 'login_required' && this.failsCount < 3) {
+      logger.debug(`(${this._requestId}) _parseJSON: 'login_required', try again:`, resJSON);
       this.failsCount++;
       return this.login(true).then(() => {
         return this._request(this.last_requestArgs).then(this._parseJSON.bind(this));
       });
     }
 
+    // if(resJSON.message == 'checkpoint_required' && this.failsCount < 1) {
+    //   this.failsCount++;
+    //   return this._request({method: 'GET', path: resJSON.checkpoint_url, options: {isAbsolute: true}})
+    //       .then(this._parseCheckpointForm.bind(this));
+    // }
+
     this.failsCount = 0;
 
-    logger.debug('_parseJSON: response: %.-500s', util.inspect(resJSON));
+    logger.debug(`(${this._requestId}) _parseJSON: response: %.-500s`, util.inspect(resJSON));
     return Promise.resolve(resJSON);
   }
 
   static _normalizeQueryParams(query) {
     let out = {};
     for(let i in query) {
-      if(query.hasOwnProperty(i)) {
+      if(Object.prototype.hasOwnProperty.call(query, i)) {
         if(query[i] !== undefined && query[i] !== null) {
           out[i] = query[i];
         }
@@ -681,7 +726,30 @@ class InstagramSDK {
     return out;
   }
 
-  _request({method = 'GET', path = '/users/self', postData, query = {}} = {}) {
+  // _parseCheckpointForm({res, resData} = {}) {
+  //   var $ = cheerio.load(resData),
+  //       $form = $('form'),
+  //       url = $form.attr('action'),
+  //       fields = $form.serializeArray(),
+  //       postData = {};
+  //
+  //   fields.forEach((field) => {
+  //     postData[field.name] = field.value;
+  //   });
+  //
+  //   return this._request({method: 'POST', path: url, postData, options: {isAbsolute: true}}).then(({res, resData} = {}) => {
+  //     console.log('resData', resData);
+  //     /*
+  //       Code: 403
+  //       <h2>Error</h2>
+  //       <p>This page could not be loaded. If you have cookies disabled in your browser,
+  //         or you are browsing in Private Mode, please try enabling cookies or turning off
+  //         Private Mode, and then retrying your action.</p>
+  //      * */
+  //   });
+  // }
+
+  _request({method = 'GET', path = '/users/self', postData, query = {}/*, options = {}*/} = {}) {
     return new Promise((resolve, reject) => {
       let headers = {
             'User-Agent': constants.USER_AGENT,
@@ -698,17 +766,28 @@ class InstagramSDK {
             timeout: 5000
           };
 
+      // if(options.isAbsolute) {
+      //   let parsedUrl = url.parse(path, true);
+      //   logger.debug('_request: absolute parsedUrl: %:2j', parsedUrl);
+      //   console.log(typeof parsedUrl.query, parsedUrl.query, parsedUrl.query.hasOwnProperty);
+      //   requestOptions.baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+      //   requestOptions.url = parsedUrl.pathname;
+      //   requestOptions.qs = InstagramSDK._normalizeQueryParams(parsedUrl.query);
+      //   logger.debug(`(${this._requestId}) _request: absolute requestOptions: %:2j`, _.omit(requestOptions, ['jar']));
+      // }
+
       if(this.proxy) {
         requestOptions.proxy = `http://${this.proxy.ip}:${this.proxy.port}`;
+        logger.debug(`(${this._requestId}) _request: using proxy: ${requestOptions.proxy}`);
       }
 
       if(postData) {
         requestOptions.form = postData;
-        logger.debug('_request: request with postData: %:2j', postData);
+        logger.debug(`(${this._requestId}) _request: request with postData: %:2j`, postData);
       }
 
       requestOptions.headers = headers;
-      logger.debug('_request: request with params: %:2j', _.omit(requestOptions, ['jar']));
+      logger.debug(`(${this._requestId}) _request: request with params: %:2j`, _.omit(requestOptions, ['jar']));
 
       // this.lastRequestOptions = requestOptions;
       this.last_requestArgs = {method, path, postData, query};
@@ -720,12 +799,15 @@ class InstagramSDK {
           return reject(err);
         }
 
-        logger.debug('_request: response statusCode:', res.statusCode);
+        logger.debug(`(${this._requestId}) _request: response statusCode:`, res.statusCode);
         resolve({res, resData});
       });
     });
   }
 
+  regenerateRequestId() {
+    this._requestId = InstagramSDK.generateUUID();
+  }
 }
 
 export default InstagramSDK;
