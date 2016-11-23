@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import {Readable as Readable} from 'stream';
 
 import Promise from 'bluebird';
-import uuid from 'node-uuid';
+import uuid from 'uuid';
 import request from 'request';
 import FileCookieStore from 'tough-cookie-filestore';
 import _ from 'lodash';
