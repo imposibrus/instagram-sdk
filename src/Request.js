@@ -2,6 +2,7 @@
 const util = require('util'),
     _ = require('lodash'),
     request = require('request'),
+    Promise = require('bluebird'),
     Constants = require('./Constants'),
     Signatures = require('./Signatures'),
     Errors = require('./Errors'),
@@ -123,6 +124,12 @@ class Request {
         this.cachedSendPromise = this.cachedSendPromise || this.send();
 
         return this.cachedSendPromise.catch(...arguments);
+    }
+
+    tap() {
+        this.cachedSendPromise = this.cachedSendPromise || this.send();
+
+        return this.cachedSendPromise.tap(...arguments);
     }
 
     send() {

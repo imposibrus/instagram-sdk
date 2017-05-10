@@ -17,11 +17,14 @@ const crypto = require('crypto'),
     logger = require('./lib/logger').getLogger('instagram-sdk');
 
 class InstagramSDK {
+    static Errors = Errors;
+
+    appRefreshInterval = 1000 * 60 * 30;
     settings;
     userAgent;
     logLevel;
     logger;
-    appRefreshInterval = 1000 * 60 * 30;
+    proxy;
 
     /**
      *
@@ -32,7 +35,7 @@ class InstagramSDK {
      */
     // eslint-disable-next-line no-unused-vars
     constructor(username, password, userSettingsDirPath, options = {}) {
-        if(!username || !password || !userSettingsDirPath) {
+        if (!username || !password || !userSettingsDirPath) {
             throw new Error('You must specify both `username`, `password` and `userSettingsDirPath`.');
         }
 
@@ -43,6 +46,10 @@ class InstagramSDK {
         this.password = password;
 
         this.settings = new UserSettings(userSettingsDirPath, username);
+
+        if (_.isObject(options.proxy) && !_.isEmpty(options.proxy.ip) && !_.isEmpty(options.proxy.port)) {
+            this.proxy = options.proxy;
+        }
 
         let userAgent = this.settings.get('userAgent');
 
@@ -300,20 +307,11 @@ class InstagramSDK {
                             }
 
                             return this._sendLoginFlow(true).then(() => {
-                                return {
-                                    device_id: this.device_id,
-                                    uuid: this.uuid,
-                                    token: this.token,
-                                    isLoggedIn: this.isLoggedIn,
-                                    account_id: this.account_id,
-                                    rank_token: this.rank_token,
-                                };
+                                return Promise.resolve(this);
                             });
-
                         });
                 });
         });
-
     }
 
     checkUsername(username) {
@@ -345,7 +343,7 @@ class InstagramSDK {
     //// Users
     //////////////////////////
     getSelf() {
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -360,7 +358,7 @@ class InstagramSDK {
         return new Promise((resolve, reject) => {
             let data = [],
                 request = (max_id, cb) => {
-                    if(methodArgs.length === 1) {
+                    if (methodArgs.length === 1) {
                         methodArgs[0][paginationProp] = max_id;
                     } else {
                         let lastArg = methodArgs.slice(-1)[0];
@@ -370,7 +368,7 @@ class InstagramSDK {
                     }
 
                     method.call(this, ...methodArgs).then((resp) => {
-                        if(resp.status !== 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
+                        if (resp.status !== 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
                             this.logger.critical('trace', resp, `(${resp.requestId})`);
 
                             return reject('Invalid response: ' + JSON.stringify(resp));
@@ -378,11 +376,11 @@ class InstagramSDK {
 
                         data = data.concat(resp[dataProp]);
 
-                        if(resp.pagination && resp.pagination['next_' + paginationProp]) {
+                        if (resp.pagination && resp.pagination['next_' + paginationProp]) {
                             setTimeout(() => {
                                 request(resp.pagination['next_' + paginationProp], cb);
                             }, timeout);
-                        } else if(resp['next_' + paginationProp]) {
+                        } else if (resp['next_' + paginationProp]) {
                             setTimeout(() => {
                                 request(resp['next_' + paginationProp], cb);
                             }, timeout);
@@ -407,7 +405,7 @@ class InstagramSDK {
         let rs = new Readable({
             objectMode: true,
             read: () => {
-                if(rs._closing) {
+                if (rs._closing) {
                     return false;
                 }
             }
@@ -426,7 +424,7 @@ class InstagramSDK {
         };
 
         const request = (max_id) => {
-            if(methodArgs.length === 1) {
+            if (methodArgs.length === 1) {
                 methodArgs[0][paginationProp] = max_id;
             } else {
                 let lastArg = methodArgs.slice(-1)[0];
@@ -438,34 +436,34 @@ class InstagramSDK {
             method.call(this, ...methodArgs).then((resp) => {
                 const items = resp[dataProp];
 
-                if(resp.status !== 'ok' || !_.isArray(items)) {
+                if (resp.status !== 'ok' || !_.isArray(items)) {
                     this.logger.critical('trace', resp, `(${resp.requestId})`);
 
                     return rs.emit('error', new Error('Invalid response: ' + JSON.stringify(resp)));
                 }
 
-                for(let i = 0; i < items.length; i++) {
-                    if(rs._closing) {
+                for (let i = 0; i < items.length; i++) {
+                    if (rs._closing) {
                         break;
                     }
 
                     rs.push(items[i]);
                 }
 
-                if(rs._closing) {
+                if (rs._closing) {
                     return false;
                 }
 
-                if(resp.pagination && resp.pagination['next_' + paginationProp]) {
+                if (resp.pagination && resp.pagination['next_' + paginationProp]) {
                     setTimeout(() => {
                         request(resp.pagination['next_' + paginationProp]);
                     }, timeout);
-                } else if(resp['next_' + paginationProp]) {
+                } else if (resp['next_' + paginationProp]) {
                     setTimeout(() => {
                         request(resp['next_' + paginationProp]);
                     }, timeout);
                 } else {
-                    if(!rs._closing) {
+                    if (!rs._closing) {
                         process.nextTick(() => {
                             rs.push(null);
                         });
@@ -491,7 +489,7 @@ class InstagramSDK {
                     args[0]['max_id'] = max_id;
 
                     this.getSelfRecentMedia.call(this, ...args).then((resp) => {
-                        if(resp.status !== 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
+                        if (resp.status !== 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
                             this.logger.critical('trace', resp, `(${resp.requestId})`);
 
                             return reject('Invalid response: ' + JSON.stringify(resp));
@@ -499,7 +497,7 @@ class InstagramSDK {
 
                         data = data.concat(resp.items || []);
 
-                        if(resp.items && resp.items.length) {
+                        if (resp.items && resp.items.length) {
                             setTimeout(() => {
                                 request(resp.items.slice(-1)[0].id, cb);
                             }, timeout);
@@ -543,11 +541,11 @@ class InstagramSDK {
     }
 
     getUserRecentMedia(userID, {count = 10, min_timestamp = undefined, max_id = undefined} = {}) {
-        if(!userID) {
+        if (!userID) {
             throw new Error('Argument `userID` is required.');
         }
 
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -594,7 +592,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 0) {
+        if (args.length === 0) {
             args.push({});
         }
 
@@ -605,7 +603,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 0) {
+        if (args.length === 0) {
             args.push({});
         }
 
@@ -613,11 +611,11 @@ class InstagramSDK {
     }
 
     getUserFollows(userID, query = {}) {
-        if(!userID) {
+        if (!userID) {
             throw new Error('Argument `userID` is required.');
         }
 
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -630,7 +628,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 1) {
+        if (args.length === 1) {
             args.push({});
         }
 
@@ -641,7 +639,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 1) {
+        if (args.length === 1) {
             args.push({});
         }
 
@@ -660,7 +658,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 0) {
+        if (args.length === 0) {
             args.push({});
         }
 
@@ -673,7 +671,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 0) {
+        if (args.length === 0) {
             args.push({});
         }
 
@@ -681,7 +679,7 @@ class InstagramSDK {
     }
 
     getUserFollowers(userID, query = {}) {
-        if(!userID) {
+        if (!userID) {
             throw new Error('Argument `userID` is required.');
         }
 
@@ -694,7 +692,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 1) {
+        if (args.length === 1) {
             args.push({});
         }
 
@@ -705,7 +703,7 @@ class InstagramSDK {
         options.paginationProp = 'max_id';
         options.dataProp = 'users';
 
-        if(args.length === 1) {
+        if (args.length === 1) {
             args.push({});
         }
 
@@ -713,7 +711,7 @@ class InstagramSDK {
     }
 
     getUserRelationship(userID) {
-        if(!userID) {
+        if (!userID) {
             throw new Error('Argument `userID` is required.');
         }
 
@@ -723,7 +721,7 @@ class InstagramSDK {
     }
 
     getUsersRelationships(usersIDS) {
-        if(!usersIDS || !usersIDS.length) {
+        if (!usersIDS || !usersIDS.length) {
             throw new Error('Argument `usersIDS` is required and must be not empty.');
         }
 
@@ -734,16 +732,16 @@ class InstagramSDK {
             .setBody({
                 user_ids: usersIDS.join(','),
                 _uuid: this.uuid,
-                _csrftoken: this.token
+                _csrftoken: this.token,
             });
     }
 
     followUser(userID) {
-        if(!userID) {
+        if (!userID) {
             throw new Error('Argument `userID` is required.');
         }
 
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -759,11 +757,11 @@ class InstagramSDK {
     }
 
     unFollowUser(userID) {
-        if(!userID) {
+        if (!userID) {
             throw new Error('Argument `userID` is required.');
         }
 
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -783,11 +781,11 @@ class InstagramSDK {
     //////////////////////////
 
     getMediaInfoById(mediaID) {
-        if(!mediaID) {
+        if (!mediaID) {
             throw new Error('Argument `mediaID` is required.');
         }
 
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -795,11 +793,11 @@ class InstagramSDK {
     }
 
     getCommentsForMedia(mediaID, maxId = null) {
-        if(!mediaID) {
+        if (!mediaID) {
             throw new Error('Argument `mediaID` is required.');
         }
 
-        if(!this.isLoggedIn) {
+        if (!this.isLoggedIn) {
             throw new Error('You must be logged in.');
         }
 
@@ -813,7 +811,7 @@ class InstagramSDK {
     }
 
     getLikesForMedia(mediaID) {
-        if(!mediaID) {
+        if (!mediaID) {
             throw new Error('Argument `mediaID` is required.');
         }
 
@@ -823,7 +821,7 @@ class InstagramSDK {
     }
 
     addLikeForMedia(mediaID) {
-        if(!mediaID) {
+        if (!mediaID) {
             throw new Error('Argument `mediaID` is required.');
         }
 
@@ -840,7 +838,7 @@ class InstagramSDK {
     }
 
     removeLikeForMedia(mediaID) {
-        if(!mediaID) {
+        if (!mediaID) {
             throw new Error('Argument `mediaID` is required.');
         }
 

@@ -50,6 +50,18 @@ class UserSettings {
         return fs.writeFileSync(this.cookiesFilePath, '');
     }
 
+    isCookiesFileOk() {
+        let fileData = fs.readFileSync(this.cookiesFilePath);
+
+        try {
+            JSON.parse(fileData);
+        } catch(err) {
+            return false;
+        }
+
+        return true;
+    }
+
     saveUserSettings() {
         fs.writeFileSync(path.join(this.userDir, util.format(this.fileNames.settings, this.username)), JSON.stringify(this._settings));
     }

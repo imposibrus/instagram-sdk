@@ -5,5 +5,5 @@ const CustomError = require('./lib/CustomError'),
 
 module.exports = {
     LoginError,
-    ThrottledError
+    ThrottledError,
 };
