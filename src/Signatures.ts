@@ -1,11 +1,11 @@
 
-const crypto = require('crypto'),
-    uuid = require('uuid'),
-    Constants = require('./Constants');
+import * as crypto from 'crypto';
+import * as uuid from 'uuid';
+import Constants from './Constants';
 
-class Signatures {
-    static generateUUID(hyphens = true) {
-        let UUID = uuid.v4();
+export default class Signatures {
+    public static generateUUID(hyphens = true) {
+        const UUID = uuid.v4();
 
         if (!hyphens) {
             return UUID.replace(/-/g, '');
@@ -14,12 +14,12 @@ class Signatures {
         return UUID;
     }
 
-    static generateDeviceId() {
+    public static generateDeviceId() {
         return 'android-' + crypto.randomBytes(8).toString('hex');
     }
 
-    static generateSignature(data) {
-        let json = JSON.stringify(data),
+    public static generateSignature(data: object) {
+        const json = JSON.stringify(data),
             hash = crypto.createHmac('SHA256', Constants.IG_SIG_KEY).update(json).digest('hex');
 
         return {
@@ -27,6 +27,4 @@ class Signatures {
             signed_body: `${hash}.${json}`,
         };
     }
-}
-
-module.exports = Signatures;
+};

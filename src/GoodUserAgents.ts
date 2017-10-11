@@ -1,8 +1,9 @@
 
-const _ = require('lodash');
+import {sample} from 'lodash';
 
-class GoodUserAgents {
-    static userAgents = [
+export default class GoodUserAgents {
+    public static userAgents = [
+        // tslint:disable:max-line-length
         /* OnePlus 3T. Released: November 2016.
          * https://www.amazon.com/OnePlus-A3010-64GB-Gunmetal-International/dp/B01N4H00V8
          * https://www.handsetdetection.com/properties/devices/OnePlus/A3010
@@ -38,19 +39,18 @@ class GoodUserAgents {
          * https://www.handsetdetection.com/properties/devices/Samsung/SM-G930F
          */
         'Instagram 10.15.0 Android (23/6.0.1; 640dpi; 1440x2560; samsung; SM-G930F; herolte; samsungexynos8890; en_US)',
+        // tslint:enable:max-line-length
     ];
 
-    static getRandomGoodUserAgent() {
-        return _.sample(GoodUserAgents.userAgents);
+    public static getRandomGoodUserAgent() {
+        return sample(GoodUserAgents.userAgents);
     }
 
-    static getAllGoodUserAgents() {
+    public static getAllGoodUserAgents() {
         return GoodUserAgents.userAgents;
     }
 
-    static isGoodUserAgent(userAgent) {
+    public static isGoodUserAgent(userAgent: string) {
         return GoodUserAgents.userAgents.indexOf(userAgent) !== -1;
     }
-}
-
-module.exports = GoodUserAgents;
+};

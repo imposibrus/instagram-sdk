@@ -1,5 +1,6 @@
 
-module.exports = {
+export default {
+    // tslint:disable:max-line-length
     // Core API Constants.
     API_URL: 'https://i.instagram.com/api/v1',
     IG_VERSION: '10.15.0',
@@ -24,5 +25,5 @@ module.exports = {
     FACEBOOK_OTA_FIELDS: 'update%257Bdownload_uri%252Cdownload_uri_delta_base%252Cversion_code_delta_base%252Cdownload_uri_delta%252Cfallback_to_full_update%252Cfile_size_delta%252Cversion_code%252Cpublished_date%252Cfile_size%252Cota_bundle_type%252Cresources_checksum%257D',
     FACEBOOK_ORCA_PROTOCOL_VERSION: 20150314,
     FACEBOOK_ORCA_APPLICATION_ID: '124024574287414',
+    // tslint:enable:max-line-length
 };
-
