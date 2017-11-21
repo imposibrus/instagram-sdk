@@ -9,7 +9,7 @@ import {IGBody} from './RequestWeb';
 
 export default class GenericStream<TQuery extends KeyValuePairs, TResponse extends IGBody> extends Readable {
     public requestInProgress = false;
-    public endCursor = '';
+    public endCursor: string | undefined;
     public ended: boolean;
     public destroyed: boolean;
     public delayMinInterval = 1000;
@@ -59,7 +59,7 @@ export default class GenericStream<TQuery extends KeyValuePairs, TResponse exten
             .catch(this.boundErrorHandler);
     }
 
-    public getItems(endCursor: string) {
+    public getItems(endCursor: string | undefined) {
         const query = Object.assign({}, this.query, {[this.paginationProp]: endCursor});
 
         return this.sdk[this.method](query);
@@ -82,7 +82,7 @@ export default class GenericStream<TQuery extends KeyValuePairs, TResponse exten
         const pageInfo = _.get<object, IGGraphQLPageInfo>(response, this.pathToPageInfo, {}),
             items = _.get(response, this.pathToItems, []);
 
-        this.endCursor = pageInfo.end_cursor || '';
+        this.endCursor = pageInfo.end_cursor;
 
         if (!items.length) {
             // sometimes API responses with empty items, but with next page available.

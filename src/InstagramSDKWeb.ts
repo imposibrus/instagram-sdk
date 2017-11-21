@@ -178,17 +178,29 @@ export class IGSDK {
             });
     }
 
-    public getUserFollowers(opts: GetUserFollowersOptions) {
+    public graphQLQuery<T>(opts: T, queryId: string) {
         return this.request('/graphql/query/')
             .setQuery({
-                query_id: '17851374694183129',
+                query_id: queryId,
                 variables: JSON.stringify(opts),
             })
             .send();
     }
 
+    public getUserFollowers(opts: GenericGraphQLOptions) {
+        return this.graphQLQuery<GenericGraphQLOptions>(opts, '17851374694183129');
+    }
+
+    public getUserFollows(opts: GenericGraphQLOptions) {
+        return this.graphQLQuery<GenericGraphQLOptions>(opts, '17874545323001329');
+    }
+
+    public getUserPosts(opts: GenericGraphQLOptions) {
+        return this.graphQLQuery<GenericGraphQLOptions>(opts, '17888483320059182');
+    }
+
     // public makeUserFollowersSteam(query = {}) {
-    //     return this.makeStream<GetUserFollowersOptions, IGResponse>(
+    //     return this.makeStream<GenericGraphQLOptions, IGResponse>(
     //         'getUserFollowers',
     //         'data.user.edge_followed_by.edges',
     //         'data.user.edge_followed_by.page_info',
@@ -202,7 +214,7 @@ export class IGSDK {
     }
 }
 
-export interface GetUserFollowersOptions {
+export interface GenericGraphQLOptions {
     id: number; // user id
     first?: number; // page size
     after?: string; // pagination property

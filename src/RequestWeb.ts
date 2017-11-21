@@ -19,7 +19,7 @@ export default class Request {
     public static baseUrl = 'https://www.instagram.com';
 
     public static parseCookies(headers: http.IncomingHttpHeaders): tough.Cookie[] {
-        const setCookieHeader: string | string[] = headers['set-cookie'],
+        const setCookieHeader: string | string[] = _.get(headers, 'set-cookie', ''),
             filteredCookies = [];
 
         let parsedCookies: Array<tough.Cookie | undefined>;
