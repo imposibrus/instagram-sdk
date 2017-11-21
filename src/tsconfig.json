@@ -14,15 +14,15 @@
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "lib": ["es5", "es2015", "es2015.collection", "dom"],
-        "outDir": "dst",
+        "outDir": "../dst",
         "declaration": true,
-        "declarationDir": "dst"
+        "declarationDir": "../dst"
     },
     "exclude": [
-        "./node_modules"
+        "../node_modules"
     ],
     "include": [
-        "./definitions/*.d.ts",
+        "../definitions/*.d.ts",
         "**/*.ts"
     ]
 }

@@ -1,9 +1,11 @@
 
 import * as util from 'util';
+
 import * as _ from 'lodash';
 import * as tough from 'tough-cookie';
 import * as got from 'got';
 import * as tunnel from 'tunnel';
+
 import Constants from './Constants';
 import Signatures from './Signatures';
 import Errors from './Errors';
@@ -32,8 +34,8 @@ export default class Request {
     public body = {};
     public query = {};
     public headers = {
-        'Connection': 'keep-alive',
-        'Accept': '*/*',
+        Connection: 'keep-alive',
+        Accept: '*/*',
         'Accept-Encoding': Constants.ACCEPT_ENCODING,
         'X-IG-Capabilities': Constants.X_IG_Capabilities,
         'X-IG-Connection-Type': Constants.X_IG_Connection_Type,

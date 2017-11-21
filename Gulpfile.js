@@ -2,7 +2,7 @@
 const gulp = require('gulp'),
     typescript = require('gulp-typescript'),
     merge = require('merge2'),
-    tsProject = typescript.createProject('tsconfig.json');
+    tsProject = typescript.createProject('src/tsconfig.json');
 
 gulp.task('compile', () => {
     const tsResult = gulp.src(['src/**/*.{ts,js}', 'definitions/**.ts'])

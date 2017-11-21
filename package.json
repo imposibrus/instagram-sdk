@@ -22,8 +22,7 @@
     "node": ">=8.4.0"
   },
   "files": [
-    "dst/",
-    "src/"
+    "dst/"
   ],
   "main": "dst/InstagramSDK.js",
   "typings": "dst/InstagramSDK.d.ts",
@@ -31,12 +30,14 @@
     "test": "test"
   },
   "scripts": {
-    "prepublish": "gulp compile",
+    "prepublishOnly": "gulp compile",
     "test": "mocha"
   },
   "dependencies": {
     "@types/tough-cookie": "^2.3.1",
-    "got": "^7.1.0",
+    "big-number": "^0.4.0",
+    "delay": "^2.0.0",
+    "got": "^8.0.0",
     "intel": "^1.2.0",
     "lodash": "4.17.4",
     "redis-cookie-store": "github:imposibrus/redis-cookie-store",
@@ -45,7 +46,8 @@
     "uuid": "^3.1.0"
   },
   "devDependencies": {
-    "@types/got": "^7.1.1",
+    "@types/delay": "^2.0.1",
+    "@types/got": "^7.1.5",
     "@types/lodash": "^4.14.72",
     "@types/node": "^8.0.20",
     "@types/tunnel": "0.0.0",
@@ -58,6 +60,7 @@
     "rimraf": "^2.6.1",
     "should": "^11.2.1",
     "sinon": "^3.2.0",
+    "tough-cookie-filestore": "github:imposibrus/tough-cookie-filestore",
     "typescript": "^2.4.2"
   }
 }
