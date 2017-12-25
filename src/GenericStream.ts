@@ -1,13 +1,18 @@
 
-import {Readable, ReadableOptions} from 'stream';
+import {ReadableOptions} from 'stream';
 
+import {Readable} from 'stronger-typed-streams';
 import * as _ from 'lodash';
 import * as delay from 'delay';
 
 import {IGSDK} from './InstagramSDKWeb';
 import {IGBody} from './RequestWeb';
 
-export default class GenericStream<TQuery extends KeyValuePairs, TResponse extends IGBody> extends Readable {
+export default class GenericStream<
+    TQuery extends KeyValuePairs,
+    TResponse extends IGBody,
+    TOut
+> extends Readable<TOut> {
     public requestInProgress = false;
     public endCursor: string | undefined;
     public ended: boolean;
@@ -15,7 +20,7 @@ export default class GenericStream<TQuery extends KeyValuePairs, TResponse exten
     public delayMinInterval = 1000;
     public delayMaxInterval = 3000;
 
-    private externalBuffer = [];
+    private externalBuffer: TOut[] = [];
     private boundErrorHandler = this.errorHandler.bind(this);
     private boundSuccessHandler = this.successHandler.bind(this);
 
@@ -27,7 +32,7 @@ export default class GenericStream<TQuery extends KeyValuePairs, TResponse exten
         private pathToPageInfo: string,
         private paginationProp = 'max_id',
         public query: TQuery,
-        private customSuccessHandler?: CustomSuccessHandler<TQuery, TResponse>,
+        private customSuccessHandler?: CustomSuccessHandler<TQuery, TResponse, TOut>,
     ) {
         super(opt);
 
@@ -38,7 +43,9 @@ export default class GenericStream<TQuery extends KeyValuePairs, TResponse exten
 
     public _read(size: number) {
         while (this.externalBuffer.length && !this.ended && !this.destroyed) {
-            if (!this.push(this.externalBuffer.shift())) {
+            const chunk = this.externalBuffer.shift();
+
+            if (chunk && !this.push(chunk)) {
                 return;
             }
         }
@@ -100,7 +107,9 @@ export default class GenericStream<TQuery extends KeyValuePairs, TResponse exten
         }
 
         while (items.length && !this.ended && !this.destroyed) {
-            if (!this.push(items.shift())) {
+            const chunk = items.shift();
+
+            if (chunk && !this.push(chunk)) {
                 [].push.apply(this.externalBuffer, items);
                 break;
             }
@@ -117,4 +126,4 @@ export interface KeyValuePairs {
     [key: string]: any;
 }
 
-export type CustomSuccessHandler<U, T> = (this: GenericStream<U, T & IGBody>, response: IGBody) => void;
+export type CustomSuccessHandler<U, T, TOut> = (this: GenericStream<U, T & IGBody, TOut>, response: IGBody) => void;

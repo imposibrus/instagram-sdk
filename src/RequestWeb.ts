@@ -15,7 +15,7 @@ import {IGSDK} from './InstagramSDKWeb';
 const Cookie = tough.Cookie,
     logger = _logger.getLogger('instagram-sdk:Request');
 
-export default class Request {
+export class Request<TBody> {
     public static baseUrl = 'https://www.instagram.com';
 
     public static parseCookies(headers: http.IncomingHttpHeaders): tough.Cookie[] {
@@ -69,12 +69,12 @@ export default class Request {
     };
     public checkStatusCode = true;
     public successStatusCodes = new Set([200, 204]);
-    public repeatOnTooManyRequestsInterval = 0;
+    // public repeatOnTooManyRequestsInterval = 0;
     public parseResponseInJSON = true;
     public reloginOnError = true;
-    public returnRawResponse = false;
     public logger: IntelLoggerInstance;
     public url: string;
+    public response: null | IGResponse<TBody>;
 
     constructor(public sdk: IGSDK, url: string) {
         this.url = Request.baseUrl + url;
@@ -89,12 +89,6 @@ export default class Request {
 
     public setParseResponseInJSON(parse: boolean) {
         this.parseResponseInJSON = parse;
-
-        return this;
-    }
-
-    public setReturnRawResponse(raw: boolean) {
-        this.returnRawResponse = raw;
 
         return this;
     }
@@ -189,7 +183,7 @@ export default class Request {
         return this;
     }
 
-    public async send() {
+    public async send(): Promise<TBody> {
         const headers = await this.getResultHeaders(),
             query = this.getResultQuery(),
             options = this.getRequestOptions(headers, query);
@@ -242,7 +236,8 @@ export default class Request {
             }
 
             throw err;
-        }).then(async (res: IGResponse) => {
+        }).then(async (res: IGResponse<TBody>) => {
+            this.response = res;
             res.requestId = this.requestId;
 
             this.logger.debug(`(${this.requestId}) Request.send: response statusCode:`, res.statusCode);
@@ -254,11 +249,11 @@ export default class Request {
                 await this.sdk.setCookie(cookie, this.url);
             }
 
-            await this.sdk.extractCSRFToken(res);
+            await this.sdk.extractCSRFToken<TBody>(res);
 
-            if (this.repeatOnTooManyRequestsInterval && res.statusCode === 429) {
-                return setTimeout(this.send.bind(this), this.repeatOnTooManyRequestsInterval);
-            }
+            // if (this.repeatOnTooManyRequestsInterval && res.statusCode === 429) {
+            //     return setTimeout(this.send.bind(this), this.repeatOnTooManyRequestsInterval);
+            // }
 
             // if (this.reloginOnError && res.body.message === 'login_required') {
             //     this.logger.debug(
@@ -274,12 +269,8 @@ export default class Request {
             if (this.parseResponseInJSON) {
                 this.logger.debug(
                     `(${this.requestId}) Request.send parsing JSON: response: %.-500s`,
-                    util.inspect(res.body),
+                    util.inspect(res.body, {depth: 5}),
                 );
-            }
-
-            if (this.returnRawResponse) {
-                return Promise.resolve(res);
             }
 
             if (res.body) {
@@ -291,7 +282,7 @@ export default class Request {
     }
 }
 
-export interface IGResponse extends got.Response<IGBody> {
+export interface IGResponse<T> extends got.Response<T & IGBody> {
     requestId: string;
 }
 
@@ -303,3 +294,217 @@ export interface IGBody {
 }
 
 export type QueryString = object | undefined;
+
+export interface IGLogin extends IGBody {
+    authenticated: boolean;
+    user: boolean;
+    reactivated: boolean;
+    status: 'ok';
+}
+
+export interface IGFollowerNode {
+    node: IGFollowerObject;
+}
+
+export interface IGFollowerObject extends IGUserMinimalObject {
+    full_name: string | null;
+    is_verified: boolean;
+}
+
+export interface IGUserFollowersBody extends IGBody {
+    data: {
+        user: {
+            edge_followed_by: Paginable & {
+                edges: IGFollowerNode[];
+            };
+        };
+    };
+}
+
+export interface IGUserFollowsBody extends IGBody {
+    data: {
+        user: {
+            edge_follow: Paginable & {
+                edges: IGFollowerNode[];
+            };
+        };
+    };
+}
+
+export interface IGUserPostsBody extends IGBody {
+    data: {
+        user: {
+            edge_owner_to_timeline_media: Paginable & {
+                edges: IGUserPostNode[];
+            };
+        };
+    };
+}
+
+export interface IGUserResponseObject extends IGBody {
+    logging_page_id?: string;
+    user: IGUserObject;
+}
+
+export interface IGUserObject {
+    biography: string | null;
+    external_url: string | null;
+    external_url_linkshimmed: string | null;
+    followed_by: IGCountable;
+    follows: IGCountable;
+    full_name: string | null;
+    id: string;
+    is_private: boolean;
+    is_verified: boolean;
+    profile_pic_url: string;
+    profile_pic_url_hd: string;
+    username: string;
+    media: IGUserMedia;
+    saved_media: IGUserMedia;
+}
+
+export interface IGUserMedia extends Paginable {
+    nodes: IGUserLastMediaNode[];
+}
+
+export interface Paginable {
+    count: number;
+    page_info: {
+        has_next_page: boolean;
+        end_cursor: string | null;
+    };
+}
+
+export interface IGUserPostNode {
+    node: IGUserAllMediaNode;
+}
+
+export interface IGTextNode {
+    node: {
+        text: string;
+    };
+}
+
+export interface IGUserMediaGenericListNode extends IGUserMediaGenericNode {
+    owner: {
+        id: string;
+    };
+    thumbnail_src: string;
+    thumbnail_resources: IGUserMediaThumbnail[];
+}
+
+export interface IGUserMediaGenericNode {
+    __typename: 'GraphImage' | 'GraphVideo' | 'GraphSidecar';
+    id: string;
+    comments_disabled: boolean;
+    dimensions: {
+        width: number;
+        height: number;
+    };
+    is_video: boolean;
+}
+
+export interface IGUserAllMediaNode extends IGUserMediaGenericListNode {
+    edge_media_to_caption: {
+        edges: IGTextNode[];
+    };
+    shortcode: string;
+    edge_media_to_comment: IGCountable;
+    taken_at_timestamp: number;
+    display_url: string;
+    edge_media_preview_like: IGCountable;
+}
+
+export interface IGUserLastMediaNode extends IGUserMediaGenericListNode {
+    gating_info: null;
+    media_preview: string | null; // base64
+    code: string; // shortCode
+    date: number;
+    display_src: string;
+    video_views?: number;
+    caption: string;
+    comments: IGCountable;
+    likes: IGCountable;
+}
+
+export interface IGUserMediaThumbnail {
+    src: string;
+    config_width: number;
+    config_height: number;
+}
+
+export interface IGCountable {
+    count: number;
+}
+
+export interface IGOpenPostBody {
+    graphql: {
+        shortcode_media: IGPostOpenObject;
+    };
+}
+
+export interface IGPostOpenObject extends IGUserMediaGenericNode {
+    shortcode: string;
+    gating_info: null;
+    media_preview: string | null;
+    display_url: string;
+    display_resources: IGUserMediaThumbnail[];
+    video_url?: string;
+    video_view_count?: number;
+    edge_media_to_tagged_user: {
+        edges: IGPostTaggedNode[];
+    };
+    edge_media_to_caption: {
+        edges: IGTextNode[];
+    };
+    edge_media_to_comment: Paginable & {
+        edges: IGPostCommentNode[];
+    };
+    taken_at_timestamp: number;
+    edge_media_preview_like: IGCountable & {
+        edges: IGPostLikeNode[];
+    };
+    location: {
+        id: string;
+        has_public_page: boolean;
+        name: string;
+        slug: string;
+    };
+    owner: IGPostOwnerObject;
+    is_ad: boolean;
+}
+
+export interface IGPostTaggedNode {
+    node: {
+        user: {
+            username: string;
+        };
+        x: number;
+        y: number;
+    };
+}
+
+export interface IGPostCommentNode {
+    node: {
+        id: string;
+        text: string;
+        created_at: number;
+        owner: IGUserMinimalObject;
+    };
+}
+
+export interface IGPostLikeNode {
+    node: IGUserMinimalObject;
+}
+
+export interface IGUserMinimalObject {
+    id: string;
+    profile_pic_url: string;
+    username: string;
+}
+
+export interface IGPostOwnerObject extends IGUserMinimalObject {
+    full_name: string | null;
+    is_private: boolean;
+    is_verified: boolean;
+}

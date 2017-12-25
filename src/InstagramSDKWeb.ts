@@ -5,7 +5,10 @@ import * as _ from 'lodash';
 import * as tough from 'tough-cookie';
 import * as BigNumber from 'big-number';
 
-import Request, {IGBody, IGResponse} from './RequestWeb';
+import {
+    Request, IGBody, IGLogin, IGResponse, IGUserFollowersBody, IGUserFollowsBody, IGUserObject, IGUserPostsBody,
+    IGUserResponseObject, IGOpenPostBody, IGFollowerNode, IGUserPostNode,
+} from './RequestWeb';
 import Errors from './Errors';
 import GenericStream, {CustomSuccessHandler} from './GenericStream';
 
@@ -50,7 +53,7 @@ export class IGSDK {
         return id.toString();
     }
 
-    public static withCredentials(username: string, password: string, options: SDKOptions) {
+    public static withCredentials(username: string, password: string, options?: SDKOptions) {
         const instance = new IGSDK(options);
 
         instance.username = username;
@@ -88,7 +91,7 @@ export class IGSDK {
         this.setCookie = util.promisify<setCookie>(this.jar.setCookie.bind(this.jar));
     }
 
-    public async extractCSRFToken(res: IGResponse) {
+    public async extractCSRFToken<TBody>(res: IGResponse<TBody>) {
         const cookies = await this.getCookies(res.url),
             CSRFCookie = cookies.find((cookie) => cookie.key === 'csrftoken');
 
@@ -103,15 +106,15 @@ export class IGSDK {
         this.token = CSRFCookie.value;
     }
 
-    public makeStream<TQuery, TResponse>(
+    public makeStream<TQuery, TBody, TOut>(
         method: string,
         pathToItems: string,
         pathToPageInfo: string,
         paginationProp: string,
         query: TQuery,
-        customSuccessHandler?: CustomSuccessHandler<TQuery, TResponse>,
+        customSuccessHandler?: CustomSuccessHandler<TQuery, TBody, TOut>,
     ) {
-        return new GenericStream<TQuery, TResponse & IGBody>(
+        return new GenericStream<TQuery, TBody & IGBody, TOut>(
             {objectMode: true, highWaterMark: 1},
             this,
             method,
@@ -124,7 +127,7 @@ export class IGSDK {
     }
 
     public getUserByName(userName: string) {
-        return this.request(`/${userName}/`)
+        return this.request<IGUserResponseObject>(`/${userName}/`)
             .setQuery({__a: 1})
             .send();
     }
@@ -134,26 +137,26 @@ export class IGSDK {
             return true;
         }
 
-        return this.request(`/`)
+        const req = this.request(`/`)
             .setMethod('HEAD')
-            .setParseResponseInJSON(false)
-            .setReturnRawResponse(true)
-            .send()
-            .then((res: IGResponse) => {
-                const cookies = Request.parseCookies(res.headers);
+            .setParseResponseInJSON(false);
 
-                return this.request(`/accounts/login/ajax/`)
-                    .setMethod('POST')
-                    .setHeaders(IGSDK.genHeaders(this.token, cookies))
-                    .setBody({
-                        username: this.username,
-                        password: this.password,
-                    })
-                    .send()
-                    .then((body: IGBody) => {
-                        return body;
-                    });
-            });
+        await req.send();
+
+        if (!req.response) {
+            throw new Error('request has been failed');
+        }
+
+        const cookies = Request.parseCookies(req.response.headers);
+
+        return this.request<IGLogin>(`/accounts/login/ajax/`)
+            .setMethod('POST')
+            .setHeaders(IGSDK.genHeaders(this.token, cookies))
+            .setBody({
+                username: this.username,
+                password: this.password,
+            })
+            .send();
     }
 
     public async isLoggedIn() {
@@ -164,22 +167,37 @@ export class IGSDK {
             return false;
         }
 
-        return this.request(`/`)
+        const req = this.request<string>(`/`)
             .setMethod('HEAD')
             .setHeaders(IGSDK.genHeaders(this.token, cookies))
-            .setParseResponseInJSON(false)
-            .setReturnRawResponse(true)
-            .send()
-            .then((res: IGResponse) => {
-                const cookies = Request.parseCookies(res.headers),
-                    userIdCookie = cookies.find((cookie) => cookie.key === 'ds_user_id');
+            .setParseResponseInJSON(false);
 
-                return !!userIdCookie;
-            });
+        await req.send();
+
+        if (!req.response) {
+            return false;
+        }
+
+        const responseCookies = Request.parseCookies(req.response.headers),
+            userIdCookie = responseCookies.find((cookie) => cookie.key === 'ds_user_id');
+
+        return !!userIdCookie;
     }
 
-    public graphQLQuery<T>(opts: T, queryId: string) {
-        return this.request('/graphql/query/')
+    public getPostById(id: number | string) {
+        const code = IGSDK.idToShortCode(id);
+
+        return this.getPostByShortCode(code);
+    }
+
+    public getPostByShortCode(shortCode: string) {
+        return this.request<IGOpenPostBody>(`/p/${shortCode}/`)
+            .setQuery({__a: 1})
+            .send();
+    }
+
+    public graphQLQuery<T, TBody>(opts: T, queryId: string): Promise<IGResponse<TBody> | TBody> {
+        return this.request<TBody>('/graphql/query/')
             .setQuery({
                 query_id: queryId,
                 variables: JSON.stringify(opts),
@@ -188,35 +206,62 @@ export class IGSDK {
     }
 
     public getUserFollowers(opts: GenericGraphQLOptions) {
-        return this.graphQLQuery<GenericGraphQLOptions>(opts, '17851374694183129');
+        return this.graphQLQuery<GenericGraphQLOptions, IGUserFollowersBody>(opts, '17851374694183129');
     }
 
     public getUserFollows(opts: GenericGraphQLOptions) {
-        return this.graphQLQuery<GenericGraphQLOptions>(opts, '17874545323001329');
+        return this.graphQLQuery<GenericGraphQLOptions, IGUserFollowsBody>(opts, '17874545323001329');
     }
 
     public getUserPosts(opts: GenericGraphQLOptions) {
-        return this.graphQLQuery<GenericGraphQLOptions>(opts, '17888483320059182');
+        return this.graphQLQuery<GenericGraphQLOptions, IGUserPostsBody>(opts, '17888483320059182');
     }
 
-    // public makeUserFollowersSteam(query = {}) {
-    //     return this.makeStream<GenericGraphQLOptions, IGResponse>(
-    //         'getUserFollowers',
-    //         'data.user.edge_followed_by.edges',
-    //         'data.user.edge_followed_by.page_info',
-    //         'after',
-    //         {id: 50703777, first: 10},
-    //     );
-    // }
+    public makeUserFollowersSteam(opts: GenericGraphQLOptions) {
+        return this.makeStream<GenericGraphQLOptions, IGUserFollowersBody, IGFollowerNode>(
+            'getUserFollowers',
+            'data.user.edge_followed_by.edges',
+            'data.user.edge_followed_by.page_info',
+            'after',
+            opts,
+        );
+    }
 
-    public request(path: string) {
-        return new Request(this, path);
+    public makeUserFollowsSteam(opts: GenericGraphQLOptions) {
+        return this.makeStream<GenericGraphQLOptions, IGUserFollowsBody, IGFollowerNode>(
+            'getUserFollows',
+            'data.user.edge_follow.edges',
+            'data.user.edge_follow.page_info',
+            'after',
+            opts,
+        );
+    }
+
+    public makeUserPostsSteam(opts: GenericGraphQLOptions) {
+        return this.makeStream<GenericGraphQLOptions, IGUserPostsBody, IGUserPostNode>(
+            'getUserPosts',
+            'data.user.edge_owner_to_timeline_media.edges',
+            'data.user.edge_owner_to_timeline_media.page_info',
+            'after',
+            opts,
+        );
+    }
+
+    public request<TBody>(path: string) {
+        return new Request<TBody>(this, path);
     }
 }
 
 export interface GenericGraphQLOptions {
     id: number; // user id
-    first?: number; // page size
+    first: number; // page size
     after?: string; // pagination property
 }
 
+export {
+    IGBody, IGLogin, IGResponse, IGFollowerNode, IGUserFollowersBody, IGUserFollowsBody, IGUserPostsBody,
+    IGUserResponseObject, IGUserObject, IGUserMedia, Paginable, IGUserPostNode, IGUserAllMediaNode, IGTextNode,
+    IGUserMediaGenericNode, IGUserLastMediaNode, IGUserMediaThumbnail, IGCountable, IGPostOwnerObject,
+    IGUserMinimalObject, IGPostLikeNode, IGPostCommentNode, IGPostTaggedNode, IGPostOpenObject, IGOpenPostBody,
+    IGUserMediaGenericListNode,
+} from './RequestWeb';
