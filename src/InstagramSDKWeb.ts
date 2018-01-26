@@ -10,7 +10,7 @@ import {
     IGUserResponseObject, IGOpenPostBody, IGFollowerNode, IGUserPostNode,
 } from './RequestWeb';
 import Errors from './Errors';
-import GenericStream, {CustomSuccessHandler} from './GenericStream';
+import {GenericStream, CustomSuccessHandler} from './GenericStream';
 
 export interface SDKOptions {
     cookieJarStore?: tough.Store;
@@ -265,3 +265,4 @@ export {
     IGUserMinimalObject, IGPostLikeNode, IGPostCommentNode, IGPostTaggedNode, IGPostOpenObject, IGOpenPostBody,
     IGUserMediaGenericListNode,
 } from './RequestWeb';
+export {GenericStream} from './GenericStream';

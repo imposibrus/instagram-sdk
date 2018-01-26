@@ -2,14 +2,14 @@
 import {ReadableOptions} from 'stream';
 
 import {Readable} from 'stronger-typed-streams';
-import * as _ from 'lodash';
+import {get, random, Dictionary} from 'lodash';
 import * as delay from 'delay';
 
 import {IGSDK} from './InstagramSDKWeb';
 import {IGBody} from './RequestWeb';
 
-export default class GenericStream<
-    TQuery extends KeyValuePairs,
+export class GenericStream<
+    TQuery extends Dictionary<any>,
     TResponse extends IGBody,
     TOut
 > extends Readable<TOut> {
@@ -61,7 +61,7 @@ export default class GenericStream<
         this.requestInProgress = true;
 
         this.getItems(this.endCursor)
-            .then(delay(_.random(this.delayMinInterval, this.delayMaxInterval)))
+            .then(delay(random(this.delayMinInterval, this.delayMaxInterval)))
             .then(this.customSuccessHandler || this.boundSuccessHandler)
             .catch(this.boundErrorHandler);
     }
@@ -86,8 +86,8 @@ export default class GenericStream<
     private successHandler(response: TResponse) {
         this.requestInProgress = false;
 
-        const pageInfo = _.get<object, IGGraphQLPageInfo>(response, this.pathToPageInfo, {}),
-            items = _.get(response, this.pathToItems, []);
+        const pageInfo = get<object, IGGraphQLPageInfo>(response, this.pathToPageInfo, {}),
+            items = get(response, this.pathToItems, []);
 
         this.endCursor = pageInfo.end_cursor;
 
@@ -95,7 +95,7 @@ export default class GenericStream<
             // sometimes API responses with empty items, but with next page available.
             // re-send request in such case.
             if (pageInfo.has_next_page) {
-                delay(_.random(this.delayMinInterval, this.delayMaxInterval)).then(() => {
+                delay(random(this.delayMinInterval, this.delayMaxInterval)).then(() => {
                     // FIXME: `this.requestInProgress` - race condition?
                     this.requestData();
                 });
@@ -120,10 +120,6 @@ export default class GenericStream<
 interface IGGraphQLPageInfo {
     has_next_page?: boolean;
     end_cursor?: string;
-}
-
-export interface KeyValuePairs {
-    [key: string]: any;
 }
 
 export type CustomSuccessHandler<U, T, TOut> = (this: GenericStream<U, T & IGBody, TOut>, response: IGBody) => void;
