@@ -394,9 +394,9 @@ export interface IGUserMediaGenericListNode extends IGUserMediaGenericNode {
 }
 
 export interface IGUserMediaGenericNode {
-    __typename: 'GraphImage' | 'GraphVideo' | 'GraphSidecar';
+    __typename?: 'GraphImage' | 'GraphVideo' | 'GraphSidecar';
     id: string;
-    comments_disabled: boolean;
+    comments_disabled?: boolean;
     dimensions: {
         width: number;
         height: number;
@@ -416,8 +416,8 @@ export interface IGUserAllMediaNode extends IGUserMediaGenericListNode {
 }
 
 export interface IGUserLastMediaNode extends IGUserMediaGenericListNode {
-    gating_info: null;
-    media_preview: string | null; // base64
+    gating_info?: null;
+    media_preview?: string | null; // base64
     code: string; // shortCode
     date: number;
     display_src: string;
@@ -464,14 +464,16 @@ export interface IGPostOpenObject extends IGUserMediaGenericNode {
     edge_media_preview_like: IGCountable & {
         edges: IGPostLikeNode[];
     };
-    location: {
-        id: string;
-        has_public_page: boolean;
-        name: string;
-        slug: string;
-    };
+    location: IGPostOpenLocationObject | null;
     owner: IGPostOwnerObject;
     is_ad: boolean;
+}
+
+export interface IGPostOpenLocationObject {
+    id: string;
+    has_public_page: boolean;
+    name: string;
+    slug: string;
 }
 
 export interface IGPostTaggedNode {
@@ -507,4 +509,40 @@ export interface IGPostOwnerObject extends IGUserMinimalObject {
     full_name: string | null;
     is_private: boolean;
     is_verified: boolean;
+}
+
+export interface IGLocationBody {
+    location: IGLocationObject;
+    logging_page_id: string;
+}
+
+export interface IGLocationObject {
+    id: string;
+    name: string;
+    has_public_page: boolean;
+    lat: number;
+    lng: number;
+    slug: string;
+    media: IGLocationMedia;
+    top_posts: IGLocationMedia;
+    directory: Directory;
+}
+
+export interface IGLocationMedia extends Paginable {
+    nodes: IGLocationGenericMediaNode[];
+}
+
+export interface IGLocationGenericMediaNode extends IGUserLastMediaNode {
+    edge_media_preview_like: IGCountable;
+}
+
+export interface Directory {
+    country: CountryOrCity;
+    city: CountryOrCity;
+}
+
+export interface CountryOrCity {
+    id: string;
+    name: string;
+    slug: string;
 }

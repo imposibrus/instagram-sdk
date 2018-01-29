@@ -7,7 +7,7 @@ import * as BigNumber from 'big-number';
 
 import {
     Request, IGBody, IGLogin, IGResponse, IGUserFollowersBody, IGUserFollowsBody, IGUserObject, IGUserPostsBody,
-    IGUserResponseObject, IGOpenPostBody, IGFollowerNode, IGUserPostNode,
+    IGUserResponseObject, IGOpenPostBody, IGFollowerNode, IGUserPostNode, IGLocationBody, IGLocationObject,
 } from './RequestWeb';
 import Errors from './Errors';
 import {GenericStream, CustomSuccessHandler} from './GenericStream';
@@ -196,6 +196,12 @@ export class IGSDK {
             .send();
     }
 
+    public getLocationById(locationId: string | number) {
+        return this.request<IGLocationBody>(`/explore/locations/${locationId}/`)
+            .setQuery({__a: 1, max_id: ''})
+            .send();
+    }
+
     public graphQLQuery<T, TBody>(opts: T, queryId: string): Promise<IGResponse<TBody> | TBody> {
         return this.request<TBody>('/graphql/query/')
             .setQuery({
@@ -263,6 +269,6 @@ export {
     IGUserResponseObject, IGUserObject, IGUserMedia, Paginable, IGUserPostNode, IGUserAllMediaNode, IGTextNode,
     IGUserMediaGenericNode, IGUserLastMediaNode, IGUserMediaThumbnail, IGCountable, IGPostOwnerObject,
     IGUserMinimalObject, IGPostLikeNode, IGPostCommentNode, IGPostTaggedNode, IGPostOpenObject, IGOpenPostBody,
-    IGUserMediaGenericListNode,
+    IGUserMediaGenericListNode, IGLocationBody, IGLocationObject,
 } from './RequestWeb';
 export {GenericStream} from './GenericStream';
