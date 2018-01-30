@@ -75,7 +75,7 @@ export class IGSDK {
     public username: string;
     public password: string;
     public jar: tough.CookieJar;
-    public logLevel = 'DEBUG';
+    public logLevel = 'INFO';
     public token: string;
     public getCookies: getCookies;
     public getCookieString: getCookieString;
