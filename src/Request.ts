@@ -5,14 +5,14 @@ import * as _ from 'lodash';
 import * as tough from 'tough-cookie';
 import * as got from 'got';
 import * as tunnel from 'tunnel';
+import {LoggerInstance} from 'winston';
 
 import Constants from './Constants';
 import Signatures from './Signatures';
 import Errors from './Errors';
-import _logger from './lib/logger';
+import Logger from './lib/logger';
 
-const Cookie = tough.Cookie,
-    logger = _logger.getLogger('instagram-sdk:Request');
+const Cookie = tough.Cookie;
 
 export default class Request {
     private static _normalizeQueryParams(query: object) {
@@ -59,11 +59,11 @@ export default class Request {
     public reloginOnError = true;
     public url: string;
     public cachedSendPromise: Promise<any>;
-    public logger: IntelLoggerInstance;
+    public logger: LoggerInstance;
 
     constructor(public ig: any, url: string) {
         this.url = Constants.API_URL + url;
-        this.logger = logger.setLevel(this.ig.logLevel);
+        this.logger = Logger.getLogger('instagram-sdk:Request', {level: this.ig.logLevel});
 
         this.headers['User-Agent'] = this.ig.userAgent;
         // this.defaultRequestOptions.jar = this.ig.jar;

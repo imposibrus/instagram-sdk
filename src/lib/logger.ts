@@ -1,9 +1,19 @@
 
-import * as intel from 'intel';
+import * as winston from 'winston';
 
-intel.basicConfig({
-    format: '[%(date)s] %(name)s.%(levelname)s: %(message)s',
-    level: intel[process.env.LOG_LEVEL || 'INFO'],
-});
+export default class Logger {
+    public static getLogger(label: string, options?: winston.ConsoleTransportOptions): winston.LoggerInstance {
+        if (winston.loggers.has(label)) {
+            return winston.loggers.get(label);
+        }
 
-export default intel;
+        return winston.loggers.add(label, {
+            console: Object.assign({}, {
+                label,
+                prettyPrint: true,
+                timestamp: true,
+                level: (process.env.LOG_LEVEL || 'info').toLowerCase(),
+            }, options),
+        });
+    }
+}

@@ -3,10 +3,10 @@ import * as crypto from 'crypto';
 import {Readable} from 'stream';
 import * as util from 'util';
 
-import * as intel from 'intel';
 import * as _ from 'lodash';
 import * as tough from 'tough-cookie';
 import * as RedisCookieStore from 'redis-cookie-store';
+import {LoggerInstance} from 'winston';
 
 import Constants from './Constants';
 import Signatures from './Signatures';
@@ -14,10 +14,9 @@ import UserSettings from './UserSettings';
 import Errors from './Errors';
 import Request from './Request';
 import GoodUserAgents from './GoodUserAgents';
-import _logger from './lib/logger';
+import Logger from './lib/logger';
 
-const logger = _logger.getLogger('instagram-sdk'),
-    CookieJar = tough.CookieJar;
+const CookieJar = tough.CookieJar;
 
 export class InstagramSDK {
     public static Errors = Errors;
@@ -30,7 +29,7 @@ export class InstagramSDK {
     public settings: any;
     public userAgent: any;
     public logLevel: any;
-    public logger: any;
+    public logger: LoggerInstance;
     public proxy: any;
     public uuid: string;
     // tslint:disable:variable-name
@@ -48,8 +47,8 @@ export class InstagramSDK {
         }
 
         this.jar = new CookieJar(new RedisCookieStore(options.redisClient, options.redisPrefix || 'instagram-sdk'));
-        this.logLevel = intel[options.LOG_LEVEL || 'INFO'];
-        this.logger = logger.setLevel(this.logLevel);
+        this.logLevel = options.LOG_LEVEL || 'INFO';
+        this.logger = Logger.getLogger('instagram-sdk', {level: this.logLevel});
 
         this.settings = new UserSettings(userSettingsDirPath, username, options.redisClient);
 
@@ -321,7 +320,7 @@ export class InstagramSDK {
 
                 this.getSelfRecentMedia.call(this, ...args).then((resp: any) => {
                     if (resp.status !== 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
-                        this.logger.critical('trace', resp, `(${resp.requestId})`);
+                        this.logger.error(resp, `(${resp.requestId})`);
 
                         return reject('Invalid response: ' + JSON.stringify(resp));
                     }
@@ -338,7 +337,7 @@ export class InstagramSDK {
                 }).catch((err: any) => {
                     const res = err.res || {};
 
-                    this.logger.critical('trace', err, `(${res.requestId})`);
+                    this.logger.error(err, `(${res.requestId})`);
                     reject(err);
                 });
             };
@@ -772,7 +771,7 @@ export class InstagramSDK {
 
                 method.call(this, ...methodArgs).then((resp: any) => {
                     if (resp.status !== 'ok' || (_.isObject(resp.errors) && !_.isEmpty(resp.errors))) {
-                        this.logger.critical('trace', resp, `(${resp.requestId})`);
+                        this.logger.error(resp, `(${resp.requestId})`);
 
                         return reject('Invalid response: ' + JSON.stringify(resp));
                     }
@@ -793,7 +792,7 @@ export class InstagramSDK {
                 }).catch((err: any) => {
                     const res = err.res || {};
 
-                    this.logger.critical('trace', err, `(${res.requestId})`);
+                    this.logger.error(err, `(${res.requestId})`);
                     reject(err);
                 });
             };
@@ -844,7 +843,7 @@ export class InstagramSDK {
                 const items = resp[dataProp];
 
                 if (resp.status !== 'ok' || !_.isArray(items)) {
-                    this.logger.critical('trace', resp, `(${resp.requestId})`);
+                    this.logger.error(resp, `(${resp.requestId})`);
 
                     return rs.emit('error', new Error('Invalid response: ' + JSON.stringify(resp)));
                 }
@@ -879,7 +878,7 @@ export class InstagramSDK {
             }).catch((err: any) => {
                 const res = err.res || {};
 
-                this.logger.critical('trace', err);
+                this.logger.error(err);
                 rs.emit('error', err, `(${res.requestId})`);
             });
         };

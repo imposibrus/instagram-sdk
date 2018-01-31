@@ -6,14 +6,14 @@ import * as _ from 'lodash';
 import * as tough from 'tough-cookie';
 import * as got from 'got';
 import * as uuid from 'uuid';
+import {LoggerInstance} from 'winston';
 // import * as tunnel from 'tunnel';
 
 import Errors from './Errors';
-import _logger from './lib/logger';
+import Logger from './lib/logger';
 import {IGSDK} from './InstagramSDKWeb';
 
-const Cookie = tough.Cookie,
-    logger = _logger.getLogger('instagram-sdk:Request');
+const Cookie = tough.Cookie;
 
 export class Request<TBody> {
     public static baseUrl = 'https://www.instagram.com';
@@ -69,16 +69,15 @@ export class Request<TBody> {
     };
     public checkStatusCode = true;
     public successStatusCodes = new Set([200, 204]);
-    // public repeatOnTooManyRequestsInterval = 0;
     public parseResponseInJSON = true;
     public reloginOnError = true;
-    public logger: IntelLoggerInstance;
+    public logger: LoggerInstance;
     public url: string;
     public response: null | IGResponse<TBody>;
 
     constructor(public sdk: IGSDK, url: string) {
         this.url = Request.baseUrl + url;
-        this.logger = logger.setLevel(this.sdk.logLevel);
+        this.logger = Logger.getLogger('instagram-sdk:Request', {level: this.sdk.logLevel});
     }
 
     public setReloginOnError(relogin: boolean) {
@@ -211,32 +210,9 @@ export class Request<TBody> {
             _.omit(options, ['body']),
         );
 
-        return got(this.url, options).catch((err) => {
-            if (err.response) {
-                err.response.requestId = this.requestId;
-            }
+        try {
+            const res: IGResponse<TBody> = await got(this.url, options);
 
-            err.res = err.response;
-
-            if (err instanceof got.HTTPError) {
-                if (this.checkStatusCode && !this.successStatusCodes.has(err.statusCode)) {
-                    if (err.statusCode === 429) {
-                        const error = new Errors.ThrottledError();
-
-                        error.res = err.response;
-
-                        throw error;
-                    }
-
-                } else {
-                    this.logger.debug(err);
-
-                    return Promise.resolve(err.response);
-                }
-            }
-
-            throw err;
-        }).then(async (res: IGResponse<TBody>) => {
             this.response = res;
             res.requestId = this.requestId;
 
@@ -250,10 +226,6 @@ export class Request<TBody> {
             }
 
             await this.sdk.extractCSRFToken<TBody>(res);
-
-            // if (this.repeatOnTooManyRequestsInterval && res.statusCode === 429) {
-            //     return setTimeout(this.send.bind(this), this.repeatOnTooManyRequestsInterval);
-            // }
 
             // if (this.reloginOnError && res.body.message === 'login_required') {
             //     this.logger.debug(
@@ -278,12 +250,49 @@ export class Request<TBody> {
             }
 
             return Promise.resolve(res.body);
-        });
+        } catch (err) {
+            if (err.response) {
+                err.response.requestId = this.requestId;
+            }
+
+            err.res = err.response;
+
+            if (err instanceof got.HTTPError) {
+                if (this.checkStatusCode && !this.successStatusCodes.has(err.statusCode)) {
+                    if (err.statusCode === 429) {
+                        if (this.sdk.options.repeatOnTooManyRequestsInterval) {
+                            return delay<TBody>(this.send.bind(this), this.sdk.options.repeatOnTooManyRequestsInterval);
+                        }
+
+                        const error = new Errors.ThrottledError();
+
+                        error.res = err.response;
+
+                        throw error;
+                    }
+
+                } else {
+                    this.logger.debug('request error', err);
+
+                    return Promise.resolve(err.response);
+                }
+            }
+
+            throw err;
+        }
     }
 }
 
+function delay<T>(func: (...args: any[]) => Promise<T>, timeout: number): Promise<T> {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            func().then(resolve).catch(reject);
+        }, timeout);
+    });
+}
+
 export interface IGResponse<T> extends got.Response<T & IGBody> {
-    requestId: string;
+    requestId?: string;
 }
 
 export interface IGBody {

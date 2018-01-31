@@ -1,6 +1,6 @@
 {
   "name": "instagram-sdk",
-  "version": "3.0.0-beta7",
+  "version": "3.0.0-beta8",
   "description": "Instagram unofficial SDK.",
   "keywords": [
     "instagram",
@@ -41,18 +41,19 @@
     "big-number": "^0.4.0",
     "delay": "^2.0.0",
     "got": "^8.0.0",
-    "intel": "^1.2.0",
     "lodash": "4.17.4",
     "redis-cookie-store": "github:imposibrus/redis-cookie-store",
     "stronger-typed-streams": "^0.1.2",
     "tough-cookie": "^2.3.3",
     "tunnel": "0.0.5",
-    "uuid": "^3.1.0"
+    "uuid": "^3.1.0",
+    "winston": "2.4.0"
   },
   "devDependencies": {
     "@types/delay": "2.0.1",
     "@types/tunnel": "0.0.0",
     "@types/uuid": "3.4.3",
+    "@types/winston": "2.3.7",
     "gulp": "3.9.1",
     "gulp-typescript": "3.2.3",
     "ioredis": "3.2.1",

@@ -14,6 +14,7 @@ import {GenericStream, CustomSuccessHandler} from './GenericStream';
 
 export interface SDKOptions {
     cookieJarStore?: tough.Store;
+    repeatOnTooManyRequestsInterval?: number;
 }
 
 export type getCookies = (currentUrl: string, options?: tough.CookieJar.GetCookiesOptions) => Promise<tough.Cookie[]>;

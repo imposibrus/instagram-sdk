@@ -7,6 +7,9 @@ import * as delay from 'delay';
 
 import {IGSDK} from './InstagramSDKWeb';
 import {IGBody} from './RequestWeb';
+import Logger from './lib/logger';
+
+const logger = Logger.getLogger('GenericStream');
 
 export class GenericStream<
     TQuery extends Dictionary<any>,
@@ -79,7 +82,7 @@ export class GenericStream<
 
     private errorHandler(err: Error) {
         this.requestInProgress = false;
-        console.error('error on fetch', err, this.method, this.endCursor, this.query);
+        logger.debug('error on fetch %s %s %j', this.method, this.endCursor, this.query, err);
         process.nextTick(() => this.emit('error', err));
     }
 
